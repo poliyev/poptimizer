@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-const tradingDates = "trading_dates"
-
 var moexZone = loadMoexZone()
 
 func loadMoexZone() *time.Location {
@@ -18,119 +16,69 @@ func loadMoexZone() *time.Location {
 	return zone
 }
 
-type CheckTradingDates struct {
-}
-
-func (c CheckTradingDates) Group() TableGroup {
-	return tradingDates
-}
-
-func (c CheckTradingDates) Name() TableName {
-	return tradingDates
-}
-
-func (c CheckTradingDates) Type() CommandType {
-	return tradingDates
-}
-
 type TradingDates struct {
-	timestamp time.Time
-	events    []Event
-	iss       *gomoex.ISSClient
-	rows      []Row
+	iss     *gomoex.ISSClient
+	rows    []gomoex.Date
+	newRows []gomoex.Date
 }
 
-func NewTradingDates(iss *gomoex.ISSClient) TradingDates {
-	return TradingDates{iss: iss}
+func (t *TradingDates) replaceRows() bool {
+	return true
 }
 
-func (t *TradingDates) Group() TableGroup {
-	return tradingDates
-}
-
-func (t *TradingDates) Name() TableName {
-	return tradingDates
-}
-
-func (t *TradingDates) Timestamp() time.Time {
-	return t.timestamp
-}
-
-func (t *TradingDates) FlushEvents() []Event {
-	events := t.events
-	t.events = make([]Event, 0)
-	return events
-}
-
-func (t *TradingDates) Handle(ctx context.Context, command Command) error {
-	if command.Type() != tradingDates {
-		return ErrWrongCommandType
-	}
-
-	if t.updateCond() {
-		rows, err := t.prepareRows(ctx, command)
-		if err != nil {
-			return err
-		}
-
-		err = t.validateRows(rows)
-		if err != nil {
-			return err
-		}
-
-		t.addEvent(rows)
-	}
-	return nil
-}
-
-func (t *TradingDates) updateCond() bool {
+func (t *TradingDates) updateCond(timestamp time.Time) bool {
 	now := time.Now().In(moexZone)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 45, 0, 0, moexZone)
 	if end.After(now) {
 		end = end.AddDate(0, 0, -1)
 	}
-	return end.After(t.timestamp)
+	return end.After(timestamp)
 }
 
-func (t *TradingDates) prepareRows(ctx context.Context, command Command) ([]Row, error) {
-	rawRows, err := t.iss.MarketDates(ctx, gomoex.EngineStock, gomoex.MarketShares)
+func (t *TradingDates) prepareRows(ctx context.Context, _ Command) (err error) {
+	t.newRows, err = t.iss.MarketDates(ctx, gomoex.EngineStock, gomoex.MarketShares)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	rows := make([]Row, len(rawRows))
-	for n, row := range rawRows {
-		rows[n] = Row(row)
-	}
-	return rows, nil
+	return nil
 }
 
-func (t *TradingDates) validateRows(rows []Row) error {
-	if len(rows) != 1 {
+func (t *TradingDates) validateRows() error {
+	if len(t.newRows) != 1 {
 		return ErrRowsValidationErr
 	}
 
 	return nil
 }
 
-func (t *TradingDates) addEvent(rows []Row) {
-	t.timestamp = time.Now()
-	if t.replaceRows() {
-		t.rows = rows
-	} else {
-		t.rows = append(t.rows, rows...)
+func (t *TradingDates) addNewRows() []Row {
+	t.rows = t.newRows
+
+	genRows := make([]Row, len(t.newRows))
+	for n, row := range t.newRows {
+		genRows[n] = Row(row)
 	}
 
-	newEvent := Event{
-		Group:       tradingDates,
-		Name:        tradingDates,
-		Timestamp:   t.timestamp,
-		ReplaceRows: t.replaceRows(),
-		NewRows:     rows,
-	}
-	t.events = append(t.events, newEvent)
+	return genRows
 }
 
-func (t *TradingDates) replaceRows() bool {
+func (t *TradingDates) replace() bool {
 	return true
+}
+
+type TradingDatesFactory struct {
+	iss *gomoex.ISSClient
+}
+
+func (t TradingDatesFactory) group() Group {
+	return "trading_dates"
+}
+
+func (t TradingDatesFactory) singleton() bool {
+	return true
+}
+
+func (t TradingDatesFactory) NewTable(name Name) Table {
+	return &BaseTable{ID: ID{"trading_dates", name}, tableTemplate: &TradingDates{iss: t.iss}}
 }
