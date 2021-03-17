@@ -6,9 +6,9 @@ import (
 )
 
 // InitTableFactory создает фабрику и регистрирует все шаблоны таблиц.
-func InitTableFactory() *TableFactory {
-	factory := TableFactory{}
+func InitTableFactory() Factory {
+	factory := MainFactory{}
 	iss := gomoex.NewISSClient(http.DefaultClient)
-	factory.registerTemplate(TradingDatesFactory{iss})
+	factory.registerTemplate("trading_dates", TradingDatesFactory{iss}, true)
 	return &factory
 }

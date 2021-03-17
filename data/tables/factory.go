@@ -4,33 +4,30 @@ type Factory interface {
 	NewTable(group Group, name Name) Table
 }
 
-type GroupFactory interface {
-	group() Group
-	singleton() bool
-	NewTable(name Name) Table
+// MainFactory регистрирует и создает таблицы.
+type MainFactory struct {
+	groupTemplates map[Group]Factory
+	singletons     map[Group]bool
 }
 
-// TableFactory регистрирует и создает таблицы.
-type TableFactory struct {
-	groupTemplates map[Group]GroupFactory
-}
-
-func (t *TableFactory) registerTemplate(factory GroupFactory) {
+func (t *MainFactory) registerTemplate(group Group, factory Factory, singleton bool) {
 	if t.groupTemplates == nil {
-		t.groupTemplates = make(map[Group]GroupFactory, 1)
+		t.groupTemplates = make(map[Group]Factory, 0)
+		t.singletons = make(map[Group]bool, 0)
 	}
-	t.groupTemplates[factory.group()] = factory
+	t.groupTemplates[group] = factory
+	t.singletons[group] = singleton
 }
 
-func (t *TableFactory) NewTable(group Group, name Name) Table {
+func (t *MainFactory) NewTable(group Group, name Name) Table {
 	factory, ok := t.groupTemplates[group]
 	if !ok {
 		panic("незарегестрированая группа")
 	}
 
-	if factory.singleton() && factory.group() != group {
+	if t.singletons[group] && group != Group(name) {
 		panic("некорректное имя таблицы")
 	}
 
-	return factory.NewTable(name)
+	return factory.NewTable(group, name)
 }

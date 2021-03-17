@@ -3,18 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/WLM1ke/gomoex"
-	"net/http"
+	"poptimizer/data/app"
 	"poptimizer/data/tables"
 )
 
 func main() {
-	iss := gomoex.NewISSClient(http.DefaultClient)
-	table := tables.NewTradingDates(iss)
-	fmt.Println(table.Timestamp())
-	cmd := tables.CheckTradingDates{}
-	_ = table.Handle(context.Background(), cmd)
-	_ = table.Handle(context.Background(), cmd)
-	fmt.Println(table.Timestamp())
-	fmt.Println(len(table.FlushEvents()))
+	repo, _ := app.InitRepo()
+	table, _ := repo.Get(context.Background(), "trading_dates", "trading_dates")
+	cmd := tables.Command{}
+	fmt.Println(table.Update(context.Background(), cmd))
+	_ = repo.Save(context.Background(), table)
+	fmt.Println(table.Update(context.Background(), cmd))
 }
