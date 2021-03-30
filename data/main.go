@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
-	app.App{}.Run()
+	q := app.App{}
+	q.Run()
 }

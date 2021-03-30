@@ -3,28 +3,35 @@ package app
 import (
 	"context"
 	"fmt"
-	"poptimizer/data/tables"
+	"poptimizer/data/domain"
 )
 
-type EventBus struct {
-	events   chan tables.Event
-	handlers []tables.EventHandler
+func eventBus(ctx context.Context, events <-chan domain.Event, commands chan<- domain.Command, rules []domain.Rule) {
+	for {
+		select {
+		case event := <-events:
+			fmt.Printf("Обработка события %+v\n", event)
+			newCmd := processRules(event, rules)
+			sendCommands(newCmd, commands)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
-func (e EventBus) Run(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case event := <-e.events:
-				fmt.Printf("%+v\n", event)
-				for _, handler := range e.handlers {
-					if handler.Match(event) {
-						handler.Handle(event)
-					}
-				}
-			case <-ctx.Done():
-				return
-			}
+func processRules(event domain.Event, rules []domain.Rule) []domain.Command {
+	cmd := make([]domain.Command, 0)
+	for _, rule := range rules {
+		if rule.Match(event) {
+			cmd = append(cmd, rule.Handle(event)...)
 		}
-	}()
+	}
+
+	return cmd
+}
+
+func sendCommands(newCmd []domain.Command, commands chan<- domain.Command) {
+	for _, cmd := range newCmd {
+		commands <- cmd
+	}
 }
