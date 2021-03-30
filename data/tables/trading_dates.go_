@@ -14,9 +14,6 @@ type (
 	}
 )
 
-type Event struct {
-	LastTradingDate time.Time
-}
 
 type Table interface {
 	Group() Group

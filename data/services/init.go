@@ -1,7 +1,7 @@
 package services
 
-import "poptimizer/data/tables"
+import "context"
 
-func InitServices(events chan<- tables.Event) {
-	Start{events}.Run()
+type Service interface {
+	Run(ctx context.Context)
 }
