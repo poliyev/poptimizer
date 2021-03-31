@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"time"
 )
 
 type (
@@ -10,23 +9,37 @@ type (
 	Name  string
 )
 
-type Table interface {
+type Identifiable interface {
 	Group() Group
 	Name() Name
-	Update(ctx context.Context, cmd Command) (Event, error)
 }
 
-type Event struct {
-	Group   Group
-	Name    Name
-	Replace bool
-	Rows    interface{}
+type EventProvider interface {
+	Events() []Event
 }
 
-type Command struct {
-	Group   Group
-	Name    Name
-	LastDay time.Time
+type Table interface {
+	Identifiable
+	EventProvider
+	Update(ctx context.Context, cmd Command)
+}
+
+type Command interface {
+	Identifiable
+}
+
+type Event interface {
+	Identifiable
+}
+
+type TableUpdated interface {
+	Event
+	Rows() interface{}
+}
+
+type ErrOccurred interface {
+	Identifiable
+	Error() error
 }
 
 type Factory interface {
@@ -39,5 +52,5 @@ type Service interface {
 
 type Rule interface {
 	Match(event Event) bool
-	Handle(event Event) []Command
+	Commands(event Event) []Command
 }

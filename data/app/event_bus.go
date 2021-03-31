@@ -23,7 +23,7 @@ func processRules(event domain.Event, rules []domain.Rule) []domain.Command {
 	cmd := make([]domain.Command, 0)
 	for _, rule := range rules {
 		if rule.Match(event) {
-			cmd = append(cmd, rule.Handle(event)...)
+			cmd = append(cmd, rule.Commands(event)...)
 		}
 	}
 

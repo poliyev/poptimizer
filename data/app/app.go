@@ -9,8 +9,7 @@ import (
 	"os/signal"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
-	"poptimizer/data/domain/services"
-	"poptimizer/data/domain/tables"
+	"sync"
 	"syscall"
 )
 
@@ -22,27 +21,21 @@ type App struct {
 
 func (a *App) initRepo() {
 	client := gomoex.NewISSClient(http.DefaultClient)
-	factory := tables.NewMainFactory(client)
-	a.repo = adapters.Repo{factory}
+	factory := domain.NewMainFactory(client)
+	repo, err := adapters.NewRepo(factory)
+	if err != nil {
+		panic("не удалось инициализировать репо")
+	}
+	a.repo = *repo
 }
 
 func (a *App) initAdapters() {
 
 }
 
-func (a *App) initCommandBus(ctx context.Context) {
-	a.commands = make(chan domain.Command)
-}
-
-func (a *App) initEventBus(ctx context.Context) {
-	a.events = make(chan domain.Event)
-	rules := []domain.Rule{}
-	go eventBus(ctx, a.events, a.commands, rules)
-}
-
 func (a *App) initDomainServices(ctx context.Context) {
 	s := []domain.Service{
-		services.WorkStarted{},
+		domain.WorkStarted{},
 	}
 	for _, service := range s {
 		commands := service.Start(ctx)
@@ -64,11 +57,26 @@ func (a *App) Run() {
 		cancel()
 	}()
 
+	a.commands = make(chan domain.Command)
+	a.events = make(chan domain.Event)
+	rules := []domain.Rule{}
+
 	a.initRepo()
 	a.initAdapters()
-	a.initCommandBus(ctx)
-	a.initEventBus(ctx)
 	a.initDomainServices(ctx)
 
-	commandBus(ctx, a.commands, a.events, a.repo)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		commandBus(ctx, a.commands, a.events, a.repo)
+	}()
+
+	go func() {
+		defer wg.Done()
+		go eventBus(ctx, a.events, a.commands, rules)
+	}()
+
+	wg.Wait()
 }

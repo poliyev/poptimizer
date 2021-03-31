@@ -1,9 +1,7 @@
-package services
+package domain
 
 import (
 	"context"
-	"poptimizer/data/domain"
-	"poptimizer/data/domain/tables"
 	"time"
 )
 
@@ -33,13 +31,13 @@ func lastDay() time.Time {
 type WorkStarted struct {
 }
 
-func (d WorkStarted) Start(ctx context.Context) <-chan domain.Command {
-	out := make(chan domain.Command)
+func (d WorkStarted) Start(ctx context.Context) <-chan Command {
+	out := make(chan Command)
 
 	go func() {
-		cmd := domain.Command{tables.GroupTradingDates, tables.GroupTradingDates, lastDay()}
+		cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 		select {
-		case out <- cmd:
+		case out <- &cmd:
 			close(out)
 		case <-ctx.Done():
 		}

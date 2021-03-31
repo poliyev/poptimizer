@@ -1,10 +1,9 @@
-package tables
+package domain
 
 import (
 	"context"
 	"errors"
 	"github.com/WLM1ke/gomoex"
-	"poptimizer/data/domain"
 )
 
 var ErrRowsValidationErr = errors.New("ошибка валидации данных")
@@ -14,42 +13,43 @@ var ErrRowsValidationErr = errors.New("ошибка валидации данн�
 // ID таблицы должна заполнять фабрика.
 // Ряды таблицы и последняя торговая дата должны грузиться из базы.
 type TradingDates struct {
-	group domain.Group
-	name  domain.Name
+	ID
+	events []Event
 
 	iss *gomoex.ISSClient
 
 	Rows []gomoex.Date
 }
 
-func (t *TradingDates) Group() domain.Group {
-	return t.group
+func (t *TradingDates) Events() []Event {
+	events := t.events
+	t.events = nil
+	return events
 }
 
-func (t *TradingDates) Name() domain.Name {
-	return t.name
-}
-
-func (t *TradingDates) Update(ctx context.Context, _ domain.Command) (domain.Event, error) {
+func (t *TradingDates) Update(ctx context.Context, _ Command) {
 	newRows, err := t.iss.MarketDates(ctx, gomoex.EngineStock, gomoex.MarketShares)
 
+	var event Event
 	switch {
 	case err != nil:
-		return domain.Event{}, err
+		event = &TableUpdateErrOccurred{t.ID, err}
 	case len(newRows) != 1:
-		return domain.Event{}, ErrRowsValidationErr
+		event = &TableUpdateErrOccurred{t.ID, ErrRowsValidationErr}
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
-		event := domain.Event{t.group, t.name, true, newRows}
-		return event, nil
+		event = &RowsReplaced{t.ID, newRows}
 	default:
-		return domain.Event{}, nil
+		return
 	}
+
+	t.events = append(t.events, event)
 }
 
 type TradingDatesFactory struct {
 	iss *gomoex.ISSClient
 }
 
-func (t TradingDatesFactory) NewTable(group domain.Group, name domain.Name) domain.Table {
-	return &TradingDates{group: group, name: name, iss: t.iss}
+func (t TradingDatesFactory) NewTable(group Group, name Name) Table {
+
+	return &TradingDates{ID: ID{group, name}, iss: t.iss}
 }
