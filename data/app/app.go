@@ -35,15 +35,18 @@ func (a *App) initAdapters() {
 
 func (a *App) initDomainServices(ctx context.Context) {
 	s := []domain.Service{
-		domain.WorkStarted{},
+		&domain.WorkStarted{},
 	}
 	for _, service := range s {
-		commands := service.Start(ctx)
-		go func() {
-			for cmd := range commands {
-				a.commands <- cmd
-			}
-		}()
+		service.Start(ctx)
+
+		if source, ok := service.(domain.CommandSource); ok {
+			go func() {
+				for cmd := range source.Commands() {
+					a.commands <- cmd
+				}
+			}()
+		}
 	}
 }
 

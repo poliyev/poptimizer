@@ -14,20 +14,13 @@ var ErrRowsValidationErr = errors.New("ошибка валидации данн�
 // Ряды таблицы и последняя торговая дата должны грузиться из базы.
 type TradingDates struct {
 	ID
-	events []Event
 
 	iss *gomoex.ISSClient
 
 	Rows []gomoex.Date
 }
 
-func (t *TradingDates) Events() []Event {
-	events := t.events
-	t.events = nil
-	return events
-}
-
-func (t *TradingDates) Update(ctx context.Context, _ Command) {
+func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 	newRows, err := t.iss.MarketDates(ctx, gomoex.EngineStock, gomoex.MarketShares)
 
 	var event Event
@@ -39,10 +32,10 @@ func (t *TradingDates) Update(ctx context.Context, _ Command) {
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
 		event = &RowsReplaced{t.ID, newRows}
 	default:
-		return
+		return nil
 	}
 
-	t.events = append(t.events, event)
+	return []Event{event}
 }
 
 type TradingDatesFactory struct {

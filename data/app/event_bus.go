@@ -11,27 +11,25 @@ func eventBus(ctx context.Context, events <-chan domain.Event, commands chan<- d
 		select {
 		case event := <-events:
 			fmt.Printf("Обработка события %+v\n", event)
-			newCmd := processRules(event, rules)
-			sendCommands(newCmd, commands)
+			processRules(event, rules, commands)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func processRules(event domain.Event, rules []domain.Rule) []domain.Command {
+func processRules(event domain.Event, rules []domain.Rule, commands chan<- domain.Command) []domain.Command {
 	cmd := make([]domain.Command, 0)
 	for _, rule := range rules {
-		if rule.Match(event) {
-			cmd = append(cmd, rule.Commands(event)...)
-		}
+		rule.HandleEvent(context.TODO(), event)
+		sendCommands(rule, commands)
 	}
 
 	return cmd
 }
 
-func sendCommands(newCmd []domain.Command, commands chan<- domain.Command) {
-	for _, cmd := range newCmd {
+func sendCommands(rule domain.Rule, commands chan<- domain.Command) {
+	for cmd := range rule.Commands() {
 		commands <- cmd
 	}
 }

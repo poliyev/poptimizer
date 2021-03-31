@@ -29,19 +29,23 @@ func lastDay() time.Time {
 }
 
 type WorkStarted struct {
+	out chan Command
 }
 
-func (d WorkStarted) Start(ctx context.Context) <-chan Command {
-	out := make(chan Command)
+func (d *WorkStarted) Start(ctx context.Context) {
+	d.out = make(chan Command)
 
 	go func() {
 		cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 		select {
-		case out <- &cmd:
-			close(out)
+		case d.out <- &cmd:
+			close(d.out)
 		case <-ctx.Done():
 		}
 	}()
 
-	return out
+}
+
+func (d *WorkStarted) Commands() <-chan Command {
+	return d.out
 }

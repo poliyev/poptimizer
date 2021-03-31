@@ -14,20 +14,6 @@ type Identifiable interface {
 	Name() Name
 }
 
-type EventProvider interface {
-	Events() []Event
-}
-
-type Table interface {
-	Identifiable
-	EventProvider
-	Update(ctx context.Context, cmd Command)
-}
-
-type Command interface {
-	Identifiable
-}
-
 type Event interface {
 	Identifiable
 }
@@ -38,8 +24,30 @@ type TableUpdated interface {
 }
 
 type ErrOccurred interface {
-	Identifiable
+	Event
 	Error() error
+}
+
+type EventConsumer interface {
+	HandleEvent(ctx context.Context, cmd Event)
+}
+
+type Command interface {
+	Identifiable
+}
+
+type CommandSource interface {
+	Commands() <-chan Command
+}
+
+type Rule interface {
+	EventConsumer
+	CommandSource
+}
+
+type Table interface {
+	Identifiable
+	HandleCommand(ctx context.Context, cmd Command) []Event
 }
 
 type Factory interface {
@@ -47,10 +55,5 @@ type Factory interface {
 }
 
 type Service interface {
-	Start(ctx context.Context) <-chan Command
-}
-
-type Rule interface {
-	Match(event Event) bool
-	Commands(event Event) []Command
+	Start(ctx context.Context)
 }

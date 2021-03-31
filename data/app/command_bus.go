@@ -35,8 +35,7 @@ func handleCommand(
 		panic("Не удалось загрузить таблицу")
 	}
 
-	table.Update(ctx, cmd)
-	for _, event := range table.Events() {
+	for _, event := range table.HandleCommand(ctx, cmd) {
 		saveUpdate(ctx, event, repo)
 		events <- event
 	}
