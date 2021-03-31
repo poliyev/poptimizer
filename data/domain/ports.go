@@ -56,4 +56,5 @@ type Factory interface {
 
 type Service interface {
 	Start(ctx context.Context)
+	CommandSource
 }
