@@ -29,7 +29,7 @@ type ErrOccurred interface {
 }
 
 type EventConsumer interface {
-	HandleEvent(ctx context.Context, cmd Event)
+	StartHandleEvent(ctx context.Context, source <-chan Event)
 }
 
 type Command interface {
@@ -37,7 +37,7 @@ type Command interface {
 }
 
 type CommandSource interface {
-	Commands() <-chan Command
+	StartProduceCommands(ctx context.Context, output chan<- Command)
 }
 
 type Rule interface {
@@ -52,9 +52,4 @@ type Table interface {
 
 type Factory interface {
 	NewTable(group Group, name Name) Table
-}
-
-type Service interface {
-	Start(ctx context.Context)
-	CommandSource
 }

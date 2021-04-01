@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+type WorkStarted struct {
+}
+
+func (w WorkStarted) StartProduceCommands(ctx context.Context, output chan<- Command) {
+	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
+	select {
+	case output <- &cmd:
+	case <-ctx.Done():
+	}
+}
+
 func prepareLocation() *time.Location {
 	loc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
@@ -15,37 +26,35 @@ func prepareLocation() *time.Location {
 
 var zoneMoscow = prepareLocation()
 
-func lastDay() time.Time {
+func nextDayEnd() time.Duration {
 	now := time.Now().In(zoneMoscow)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 45, 0, 0, zoneMoscow)
 
-	days := 1
 	if end.After(now) {
-		days = 2
+		return end.Sub(now)
 	}
-	end = end.AddDate(0, 0, -days)
-
-	return time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, time.UTC)
+	return end.AddDate(0, 0, 1).Sub(now)
 }
 
-type WorkStarted struct {
-	out chan Command
+type DayStarted struct {
 }
 
-func (d *WorkStarted) Start(ctx context.Context) {
-	d.out = make(chan Command)
+func (d DayStarted) StartProduceCommands(ctx context.Context, output chan<- Command) {
+	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
+	timer := time.NewTimer(nextDayEnd())
 
-	go func() {
-		cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
+LOOP:
+	for {
+
 		select {
-		case d.out <- &cmd:
-			close(d.out)
+		case <-timer.C:
+			go func() {
+				output <- &cmd
+			}()
+			timer.Reset(nextDayEnd())
 		case <-ctx.Done():
+			timer.Stop()
+			break LOOP
 		}
-	}()
-
-}
-
-func (d *WorkStarted) Commands() <-chan Command {
-	return d.out
+	}
 }

@@ -5,28 +5,44 @@ import (
 	"fmt"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
+	"sync"
 )
 
 type Bus struct {
 	commands  chan domain.Command
 	events    chan domain.Event
-	consumers []domain.EventConsumer
+	consumers []chan domain.Event
 	repo      *adapters.Repo
+	ctx       context.Context
+	wg        sync.WaitGroup
 }
 
 func (b *Bus) Run(ctx context.Context) {
-	b.commands = make(chan domain.Command)
+	if b.ctx != nil {
+		panic("Шина уже запущена")
+	}
+
 	b.events = make(chan domain.Event)
+	b.ctx = ctx
 
 	for {
+		b.wg.Add(1)
 		select {
 		case cmd := <-b.commands:
 			fmt.Printf("Обработка команды %+v\n", cmd)
-			go b.handleOneCommand(ctx, cmd)
+			go func() {
+				defer b.wg.Done()
+				b.handleOneCommand(ctx, cmd)
+			}()
 		case event := <-b.events:
 			fmt.Printf("Обработка события %+v\n", event)
-			go b.handleOneEvent(ctx, event)
+			go func() {
+				defer b.wg.Done()
+				go b.handleOneEvent(ctx, event)
+			}()
 		case <-ctx.Done():
+			b.wg.Done()
+			b.wg.Wait()
 			return
 		}
 	}
@@ -50,21 +66,31 @@ func (b *Bus) handleOneEvent(ctx context.Context, event domain.Event) {
 		}
 	}
 	for _, consumer := range b.consumers {
-		consumer.HandleEvent(ctx, event)
+		consumer <- event
 	}
 }
 
 func (b *Bus) register(step interface{}) {
-
-	if consumer, ok := step.(domain.EventConsumer); ok {
-		b.consumers = append(b.consumers, consumer)
+	if b.commands == nil {
+		b.commands = make(chan domain.Command)
 	}
 
-	if cs, ok := step.(domain.CommandSource); ok {
+	if consumer, ok := step.(domain.EventConsumer); ok {
+		newChan := make(chan domain.Event)
+		b.consumers = append(b.consumers, newChan)
+
+		b.wg.Add(1)
 		go func() {
-			for cmd := range cs.Commands() {
-				b.commands <- cmd
-			}
+			defer b.wg.Done()
+			consumer.StartHandleEvent(b.ctx, newChan)
+		}()
+	}
+
+	if source, ok := step.(domain.CommandSource); ok {
+		b.wg.Add(1)
+		go func() {
+			defer b.wg.Done()
+			source.StartProduceCommands(b.ctx, b.commands)
 		}()
 	}
 

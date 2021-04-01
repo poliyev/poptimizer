@@ -48,15 +48,15 @@ func (r *Repo) Save(ctx context.Context, event domain.TableUpdated) error {
 	return nil
 }
 
-func NewRepo(factory domain.Factory) (*Repo, error) {
+func NewRepo(factory domain.Factory) *Repo {
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
-		return nil, err
+		panic("не удалось инициализировать репо")
 	}
 
 	repo := Repo{
 		factory: factory,
 		db:      client.Database("new_data"),
 	}
-	return &repo, nil
+	return &repo
 }

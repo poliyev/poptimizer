@@ -2,14 +2,11 @@ package app
 
 import (
 	"context"
-	"github.com/WLM1ke/gomoex"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
-	"sync"
 	"syscall"
 )
 
@@ -30,34 +27,24 @@ func (a *App) Run() {
 		cancel()
 	}()
 
-	client := gomoex.NewISSClient(http.DefaultClient)
-	factory := domain.NewMainFactory(client)
-	repo, err := adapters.NewRepo(factory)
-	if err != nil {
-		panic("не удалось инициализировать репо")
-	}
+	iss := adapters.NewISSClient()
+	factory := domain.NewMainFactory(iss)
+	repo := adapters.NewRepo(factory)
 
 	bus := Bus{repo: repo}
 
 	rules := []domain.Rule{}
-	for rule := range rules {
+	for _, rule := range rules {
 		bus.register(rule)
 	}
 
-	services := []domain.Service{
+	sources := []domain.CommandSource{
 		&domain.WorkStarted{},
+		&domain.DayStarted{},
 	}
-	for _, service := range services {
-		service.Start(ctx)
-		bus.register(service)
+	for _, source := range sources {
+		bus.register(source)
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		bus.Run(ctx)
-	}()
-
-	wg.Wait()
+	bus.Run(ctx)
 }
