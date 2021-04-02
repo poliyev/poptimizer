@@ -39,7 +39,6 @@ func (a *App) Run() {
 	}
 
 	sources := []domain.CommandSource{
-		&domain.WorkStarted{},
 		&domain.DayStarted{},
 	}
 	for _, source := range sources {
