@@ -33,16 +33,15 @@ func (a *App) Run() {
 
 	bus := Bus{repo: repo}
 
-	rules := []domain.Rule{}
-	for _, rule := range rules {
-		bus.register(rule)
-	}
-
-	sources := []domain.CommandSource{
+	steps := []interface{}{
+		// Источники команд
 		&domain.CheckTradingDay{},
+		// Правила
+
+		// Потребители сообщений
 	}
-	for _, source := range sources {
-		bus.register(source)
+	for _, step := range steps {
+		bus.register(step)
 	}
 
 	bus.Run(ctx)

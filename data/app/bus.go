@@ -74,7 +74,7 @@ func (b *Bus) register(step interface{}) {
 	if b.commands == nil {
 		b.commands = make(chan domain.Command)
 	}
-
+	// Добавить логинг о старте и завершении
 	if consumer, ok := step.(domain.EventConsumer); ok {
 		newChan := make(chan domain.Event)
 		b.consumers = append(b.consumers, newChan)
@@ -85,7 +85,7 @@ func (b *Bus) register(step interface{}) {
 			consumer.StartHandleEvent(b.ctx, newChan)
 		}()
 	}
-
+	// Добавить логинг о старте и завершении
 	if source, ok := step.(domain.CommandSource); ok {
 		b.wg.Add(1)
 		go func() {

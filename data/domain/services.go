@@ -50,7 +50,7 @@ func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<-
 		timer = defaultUpdateTimer
 	}
 
-	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
+	cmd := UpdateTable{ID{groupTradingDates, groupTradingDates}}
 
 	now := time.Now()
 	output <- &cmd

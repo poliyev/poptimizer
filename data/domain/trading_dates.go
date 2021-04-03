@@ -8,10 +8,10 @@ import (
 
 var ErrRowsValidationErr = errors.New("ошибка валидации данных")
 
+// groupTradingDates - группа таблицы с торговыми данными.
+const groupTradingDates = "trading_dates"
+
 // TradingDates - таблица с диапазоном торговых дат.
-//
-// ID таблицы должна заполнять фабрика.
-// Ряды таблицы и последняя торговая дата должны грузиться из базы.
 type TradingDates struct {
 	ID
 
@@ -20,29 +20,27 @@ type TradingDates struct {
 	Rows []gomoex.Date
 }
 
+// HandleCommand - полностью переписывает таблицу, если появились новые данные о торговых датах.
 func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 	newRows, err := t.iss.MarketDates(ctx, gomoex.EngineStock, gomoex.MarketShares)
 
-	var event Event
 	switch {
 	case err != nil:
-		event = &TableUpdateErrOccurred{t.ID, err}
+		panic("не удалось получить данные от ISS")
 	case len(newRows) != 1:
-		event = &TableUpdateErrOccurred{t.ID, ErrRowsValidationErr}
+		panic("ошибка валидации данных от ISS")
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
-		event = &RowsReplaced{t.ID, newRows}
+		return []Event{&RowsReplaced{t.ID, newRows}}
 	default:
 		return nil
 	}
-
-	return []Event{event}
 }
 
-type TradingDatesFactory struct {
+type tradingDatesFactory struct {
 	iss *gomoex.ISSClient
 }
 
-func (t TradingDatesFactory) NewTable(group Group, name Name) Table {
+func (t tradingDatesFactory) NewTable(group Group, name Name) Table {
 
 	return &TradingDates{ID: ID{group, name}, iss: t.iss}
 }
