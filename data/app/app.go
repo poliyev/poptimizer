@@ -39,7 +39,7 @@ func (a *App) Run() {
 	}
 
 	sources := []domain.CommandSource{
-		&domain.DayStarted{},
+		&domain.CheckTradingDay{},
 	}
 	for _, source := range sources {
 		bus.register(source)
