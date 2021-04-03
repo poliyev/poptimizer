@@ -2,10 +2,6 @@ package domain
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -14,47 +10,47 @@ func prepareLocation() *time.Location {
 	if err != nil {
 		panic("не удалось загрузить часовой пояс Москвы")
 	}
+
 	return loc
 }
 
 var zoneMoscow = prepareLocation()
 
-func nextDayStart() time.Time {
+//Информация о торгах публикуется на MOEX ISS в 0:45 на следующий день.
+func nextISSDailyUpdate() time.Time {
 	now := time.Now().In(zoneMoscow)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 45, 0, 0, zoneMoscow)
 
 	if end.Before(now) {
-		end.AddDate(0, 0, 1).Sub(now)
+		end = end.AddDate(0, 0, 1)
 	}
+
 	return end
 }
 
-type DayStarted struct {
+// CheckTradingDay формирует команды о необходимости проверки окончания торгового дня.
+//
+// Требуется при запуске приложения и ежедневно после публикации данных на MOEX ISS.
+type CheckTradingDay struct {
 }
 
-func (d DayStarted) StartProduceCommands(ctx context.Context, output chan<- Command) {
+func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
 	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	output <- &cmd
-	nextDay := nextDayStart()
+	nextDataUpdate := nextISSDailyUpdate()
 
+	// Так как компьютер может заснуть, что вызывает расхождение между монотонным фактическим временем,
+	// то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
 	timer := time.Tick(time.Hour)
-	wake := make(chan os.Signal, 1)
-	signal.Notify(wake, syscall.SIGCONT)
 
 LOOP:
 	for {
 		select {
 		case <-timer:
-			if time.Now().After(nextDay) {
+			if time.Now().After(nextDataUpdate) {
 				output <- &cmd
-				nextDay = nextDayStart()
-			}
-		case <-wake:
-			fmt.Printf("Программа проснулась после сна")
-			if time.Now().After(nextDay) {
-				output <- &cmd
-				nextDay = nextDayStart()
+				nextDataUpdate = nextISSDailyUpdate()
 			}
 		case <-ctx.Done():
 			break LOOP
