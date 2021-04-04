@@ -11,7 +11,11 @@ import (
 
 func TestZone(t *testing.T) {
 	moscow, _ := time.LoadLocation("Europe/Moscow")
-	assert.Equal(t, zoneMoscow, moscow)
+	assert.Equal(t, prepareZone("Europe/Moscow"), moscow)
+}
+
+func TestZonePanic(t *testing.T) {
+	assert.Panics(t, func() { prepareZone("WrongZone") })
 }
 
 func TestBeforeNextISSDailyUpdate(t *testing.T) {

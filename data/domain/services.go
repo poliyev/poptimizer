@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-func prepareZone() *time.Location {
-	loc, err := time.LoadLocation("Europe/Moscow")
+func prepareZone(zone string) *time.Location {
+	loc, err := time.LoadLocation(zone)
 	if err != nil {
 		panic("Не удалось загрузить часовой пояс Москвы")
 	}
@@ -15,7 +15,7 @@ func prepareZone() *time.Location {
 }
 
 //Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
-var zoneMoscow = prepareZone()
+var zoneMoscow = prepareZone("Europe/Moscow")
 
 const (
 	issHour   = 0
