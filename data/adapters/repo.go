@@ -27,15 +27,15 @@ func (r *Repo) Load(ctx context.Context, group domain.Group, name domain.Name) (
 	}
 }
 
-func (r *Repo) ViewJOSN(ctx context.Context, group domain.Group, name domain.Name) (string, error) {
+func (r *Repo) ViewJOSN(ctx context.Context, group domain.Group, name domain.Name) ([]byte, error) {
 	collection := r.db.Collection(string(group))
 
 	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1})
 	raw, err := collection.FindOne(ctx, bson.M{"_id": name}, projections).DecodeBytes()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return raw.Lookup("rows").String(), nil
+	return bson.MarshalExtJSON(raw, true, true)
 }
 
 func (r *Repo) Save(ctx context.Context, event domain.TableUpdated) error {
