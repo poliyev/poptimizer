@@ -4,38 +4,24 @@ import (
 	"github.com/WLM1ke/gomoex"
 )
 
-// mainFactory регистрирует другие фабрики и создает любые таблицы.
+// mainFactory создает любые таблицы.
 type mainFactory struct {
-	groupTemplates map[Group]Factory
-	singletons     map[Group]bool
-}
-
-// Каждая фабрика создает талицы из одной группы. В группе может быть единственная талица,
-// тогда имя таблицы должно совпадать с именем группы.
-func (t *mainFactory) registerGroupFactory(group Group, factory Factory, singleton bool) {
-	t.groupTemplates[group] = factory
-	t.singletons[group] = singleton
+	iss *gomoex.ISSClient
 }
 
 // NewTable - создает таблицу и проверяет, что указано корректное имя таблицы для групп с одной таблицей.
 func (t *mainFactory) NewTable(group Group, name Name) Table {
-	factory, ok := t.groupTemplates[group]
-	if !ok {
-		panic("Незарегистрированная группа")
+	switch {
+	case group == groupTradingDates && name == groupTradingDates:
+		return &TradingDates{id: id{group, name}, iss: t.iss}
+	default:
+		panic("Некорректное ID таблицы")
 	}
-
-	if t.singletons[group] && group != Group(name) {
-		panic("Некорректное имя таблицы")
-	}
-
-	return factory.NewTable(group, name)
 }
 
 // NewMainFactory - создает главную фабрику и регистрирует все доступные группы таблиц.
 func NewMainFactory(iss *gomoex.ISSClient) Factory {
-	factory := mainFactory{map[Group]Factory{}, map[Group]bool{}}
-
-	factory.registerGroupFactory(groupTradingDates, tradingDatesFactory{iss}, true)
+	factory := mainFactory{iss}
 
 	return &factory
 }

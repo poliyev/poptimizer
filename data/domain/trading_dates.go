@@ -19,7 +19,7 @@ func prepareZone(zone string) *time.Location {
 }
 
 //Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
-var zoneMoscow = prepareZone("Europe/Moscow")
+var issZone = prepareZone("Europe/Moscow")
 
 const (
 	issHour   = 0
@@ -27,8 +27,8 @@ const (
 )
 
 func nextISSDailyUpdate(now time.Time) time.Time {
-	now = now.In(zoneMoscow)
-	end := time.Date(now.Year(), now.Month(), now.Day(), issHour, issMinute, 0, 0, zoneMoscow)
+	now = now.In(issZone)
+	end := time.Date(now.Year(), now.Month(), now.Day(), issHour, issMinute, 0, 0, issZone)
 
 	if end.Before(now) {
 		end = end.AddDate(0, 0, 1)
@@ -39,7 +39,7 @@ func nextISSDailyUpdate(now time.Time) time.Time {
 
 // Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
 // то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
-var defaultUpdateTimer = time.Tick(time.Hour)
+var issUpdateTimer = time.Tick(time.Hour)
 
 // CheckTradingDay формирует команды о необходимости проверки окончания торгового дня.
 //
@@ -51,7 +51,7 @@ type CheckTradingDay struct {
 func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
 	timer := d.timer
 	if timer == nil {
-		timer = defaultUpdateTimer
+		timer = issUpdateTimer
 	}
 
 	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
@@ -97,13 +97,4 @@ func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 	default:
 		return nil
 	}
-}
-
-type tradingDatesFactory struct {
-	iss *gomoex.ISSClient
-}
-
-func (t tradingDatesFactory) NewTable(group Group, name Name) Table {
-
-	return &TradingDates{id: id{group, name}, iss: t.iss}
 }

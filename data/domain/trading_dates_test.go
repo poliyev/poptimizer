@@ -20,14 +20,14 @@ func TestZonePanic(t *testing.T) {
 
 func TestBeforeNextISSDailyUpdate(t *testing.T) {
 	in := time.Date(2021, 4, 3, 21, 44, 0, 0, time.UTC)
-	out := time.Date(2021, 4, 4, 0, 45, 0, 0, zoneMoscow)
+	out := time.Date(2021, 4, 4, 0, 45, 0, 0, issZone)
 
 	assert.Equal(t, out, nextISSDailyUpdate(in))
 }
 
 func TestAfterNextISSDailyUpdate(t *testing.T) {
 	in := time.Date(2021, 4, 3, 21, 46, 0, 0, time.UTC)
-	out := time.Date(2021, 4, 5, 0, 45, 0, 0, zoneMoscow)
+	out := time.Date(2021, 4, 5, 0, 45, 0, 0, issZone)
 
 	assert.Equal(t, out, nextISSDailyUpdate(in))
 }
