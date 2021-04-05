@@ -2,18 +2,81 @@ package domain
 
 import (
 	"context"
-	"errors"
 	"github.com/WLM1ke/gomoex"
+	"time"
 )
-
-var ErrRowsValidationErr = errors.New("ошибка валидации данных")
 
 // groupTradingDates - группа таблицы с торговыми данными.
 const groupTradingDates = "trading_dates"
 
+func prepareZone(zone string) *time.Location {
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		panic("Не удалось загрузить часовой пояс Москвы")
+	}
+
+	return loc
+}
+
+//Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
+var zoneMoscow = prepareZone("Europe/Moscow")
+
+const (
+	issHour   = 0
+	issMinute = 45
+)
+
+func nextISSDailyUpdate(now time.Time) time.Time {
+	now = now.In(zoneMoscow)
+	end := time.Date(now.Year(), now.Month(), now.Day(), issHour, issMinute, 0, 0, zoneMoscow)
+
+	if end.Before(now) {
+		end = end.AddDate(0, 0, 1)
+	}
+
+	return end
+}
+
+// Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
+// то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
+var defaultUpdateTimer = time.Tick(time.Hour)
+
+// CheckTradingDay формирует команды о необходимости проверки окончания торгового дня.
+//
+// Требуется при запуске приложения и ежедневно после публикации данных на MOEX ISS.
+type CheckTradingDay struct {
+	timer <-chan time.Time
+}
+
+func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
+	timer := d.timer
+	if timer == nil {
+		timer = defaultUpdateTimer
+	}
+
+	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+
+	now := time.Now()
+	output <- &cmd
+	nextDataUpdate := nextISSDailyUpdate(now)
+
+LOOP:
+	for {
+		select {
+		case now = <-timer:
+			if now.After(nextDataUpdate) {
+				output <- &cmd
+				nextDataUpdate = nextISSDailyUpdate(now)
+			}
+		case <-ctx.Done():
+			break LOOP
+		}
+	}
+}
+
 // TradingDates - таблица с диапазоном торговых дат.
 type TradingDates struct {
-	ID
+	id
 
 	iss *gomoex.ISSClient
 
@@ -26,11 +89,11 @@ func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 
 	switch {
 	case err != nil:
-		panic("не удалось получить данные от ISS")
+		panic("Не удалось получить данные ISS")
 	case len(newRows) != 1:
-		panic("ошибка валидации данных от ISS")
+		panic("Ошибка валидации данных ISS")
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
-		return []Event{&RowsReplaced{t.ID, newRows}}
+		return []Event{&RowsReplaced{t.id, newRows}}
 	default:
 		return nil
 	}
@@ -42,5 +105,5 @@ type tradingDatesFactory struct {
 
 func (t tradingDatesFactory) NewTable(group Group, name Name) Table {
 
-	return &TradingDates{ID: ID{group, name}, iss: t.iss}
+	return &TradingDates{id: id{group, name}, iss: t.iss}
 }

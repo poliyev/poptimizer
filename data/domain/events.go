@@ -2,7 +2,7 @@ package domain
 
 // RowsReplaced - событие замены всех строк в таблице.
 type RowsReplaced struct {
-	ID
+	id
 	rows interface{}
 }
 
@@ -13,7 +13,7 @@ func (r *RowsReplaced) Rows() interface{} {
 
 // RowsAppended - событие добавления строк в конец таблицы.
 type RowsAppended struct {
-	ID
+	id
 	rows interface{}
 }
 

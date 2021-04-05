@@ -33,7 +33,7 @@ func TestAfterNextISSDailyUpdate(t *testing.T) {
 }
 
 func TestTradingDayAppStart(t *testing.T) {
-	out := UpdateTable{ID{groupTradingDates, groupTradingDates}}
+	out := UpdateTable{id{groupTradingDates, groupTradingDates}}
 
 	output := make(chan Command)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -53,7 +53,7 @@ func TestTradingDayAppStart(t *testing.T) {
 }
 
 func TestTradingDayNextUpdate(t *testing.T) {
-	out := UpdateTable{ID{groupTradingDates, groupTradingDates}}
+	out := UpdateTable{id{groupTradingDates, groupTradingDates}}
 
 	timer := make(chan time.Time)
 
