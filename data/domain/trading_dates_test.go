@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+	"github.com/WLM1ke/gomoex"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -81,4 +83,37 @@ func TestTradingDayNextUpdate(t *testing.T) {
 
 	cancel()
 	wg.Wait()
+}
+
+func TestTradingDatesFirstUpdate(t *testing.T) {
+	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient)}
+	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+
+	events := table.HandleCommand(context.Background(), &cmd)
+	assert.Equal(t, 1, len(events))
+
+	_, ok := events[0].(*RowsReplaced)
+	assert.True(t, ok)
+}
+
+func TestTradingDatesReplaceUpdate(t *testing.T) {
+	rows := []gomoex.Date{{}}
+	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient), Rows: rows}
+	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+
+	events := table.HandleCommand(context.Background(), &cmd)
+	assert.Equal(t, 1, len(events))
+
+	_, ok := events[0].(*RowsReplaced)
+	assert.True(t, ok)
+}
+
+func TestTradingDatesEmptyUpdate(t *testing.T) {
+	iss := gomoex.NewISSClient(http.DefaultClient)
+	rows, _ := iss.MarketDates(context.Background(), gomoex.EngineStock, gomoex.MarketShares)
+	table := TradingDates{iss: iss, Rows: rows}
+	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+
+	events := table.HandleCommand(context.Background(), &cmd)
+	assert.Nil(t, events)
 }
