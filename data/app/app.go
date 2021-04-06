@@ -2,36 +2,22 @@ package app
 
 import (
 	"context"
-	"log"
-	"os"
-	"os/signal"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
-	"syscall"
 )
 
 type App struct {
+	repo *adapters.Repo
 }
 
-func (a *App) initAdapters() {
+func (a *App) Run(ctx context.Context) {
+	if a.repo == nil {
+		iss := adapters.NewISSClient()
+		factory := domain.NewMainFactory(iss)
+		a.repo = adapters.NewRepo(factory)
+	}
 
-}
-
-func (a *App) Run() {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		stop := make(chan os.Signal, 1)
-		signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-		<-stop
-		log.Printf("\n[WARN] interrupt signal")
-		cancel()
-	}()
-
-	iss := adapters.NewISSClient()
-	factory := domain.NewMainFactory(iss)
-	repo := adapters.NewRepo(factory)
-
-	bus := Bus{repo: repo}
+	bus := Bus{repo: a.repo}
 
 	steps := []interface{}{
 		// Источники команд
@@ -45,4 +31,8 @@ func (a *App) Run() {
 	}
 
 	bus.Run(ctx)
+}
+
+func (a App) GetJson(ctx context.Context) ([]byte, error) {
+	return a.repo.ViewJOSN(ctx, "trading_dates", "trading_dates")
 }
