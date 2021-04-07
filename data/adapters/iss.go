@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// NewISSClient - создает клиент для ISS с ограничением на количество соединений.
 func NewISSClient() *gomoex.ISSClient {
 	client := &http.Client{
 		Transport: &http.Transport{
