@@ -93,7 +93,7 @@ func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 	case len(newRows) != 1:
 		panic("Ошибка валидации данных ISS")
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
-		return []Event{&RowsReplaced{t.TableID, newRows}}
+		return []Event{RowsReplaced{t.TableID, newRows}}
 	default:
 		return nil
 	}

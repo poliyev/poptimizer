@@ -40,5 +40,5 @@ func (a *App) Run(ctx context.Context) {
 }
 
 func (a App) GetJson(ctx context.Context) ([]byte, error) {
-	return a.repo.ViewJOSN(ctx, "trading_dates", "trading_dates")
+	return a.repo.ViewJOSN(ctx, domain.TableID{"trading_dates", "trading_dates"})
 }
