@@ -49,7 +49,7 @@ func (b *Bus) Run(ctx context.Context) {
 }
 
 func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
-	table, err := b.repo.Load(ctx, cmd.Group(), cmd.Name())
+	table, err := b.repo.Load(ctx, cmd.ID())
 	if err != nil {
 		panic("Не удалось загрузить таблицу")
 	}
@@ -59,11 +59,9 @@ func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 }
 
 func (b *Bus) handleOneEvent(ctx context.Context, event domain.Event) {
-	if update, ok := event.(domain.TableUpdated); ok {
-		err := b.repo.Save(ctx, update)
-		if err != nil {
-			panic("Не удалось сохранить таблицу")
-		}
+	err := b.repo.Save(ctx, event)
+	if err != nil {
+		panic("Не удалось сохранить таблицу")
 	}
 	for _, consumer := range b.consumers {
 		consumer <- event

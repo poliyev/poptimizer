@@ -6,6 +6,11 @@ import (
 	"poptimizer/data/domain"
 )
 
+const (
+	MongoURI = "mongodb://localhost:27017"
+	mongoDB  = "new_data"
+)
+
 type App struct {
 	repo *adapters.Repo
 }
@@ -14,7 +19,8 @@ func (a *App) Run(ctx context.Context) {
 	if a.repo == nil {
 		iss := adapters.NewISSClient()
 		factory := domain.NewMainFactory(iss)
-		a.repo = adapters.NewRepo(factory)
+		// TODO: закрывать РЕПО
+		a.repo = adapters.NewRepo(MongoURI, mongoDB, factory)
 	}
 
 	bus := Bus{repo: a.repo}

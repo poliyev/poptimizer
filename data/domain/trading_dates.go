@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// groupTradingDates - группа таблицы с торговыми данными.
-const groupTradingDates = "trading_dates"
+// GroupTradingDates - группа таблицы с торговыми данными.
+const GroupTradingDates = "trading_dates"
 
 func prepareZone(zone string) *time.Location {
 	loc, err := time.LoadLocation(zone)
@@ -54,7 +54,7 @@ func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<-
 		timer = issUpdateTimer
 	}
 
-	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	cmd := UpdateTable{TableID{GroupTradingDates, GroupTradingDates}}
 
 	now := time.Now()
 	output <- &cmd
@@ -76,7 +76,7 @@ LOOP:
 
 // TradingDates - таблица с диапазоном торговых дат.
 type TradingDates struct {
-	id
+	TableID
 
 	iss *gomoex.ISSClient
 
@@ -93,7 +93,7 @@ func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 	case len(newRows) != 1:
 		panic("Ошибка валидации данных ISS")
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
-		return []Event{&RowsReplaced{t.id, newRows}}
+		return []Event{&RowsReplaced{t.TableID, newRows}}
 	default:
 		return nil
 	}

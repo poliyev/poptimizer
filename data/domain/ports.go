@@ -10,27 +10,24 @@ type (
 	Name  string
 )
 
+// TableID используется для идентификации таблиц, команд и событий, связанных с ними.
+type TableID struct {
+	Group Group
+	Name  Name
+}
+
+func (i TableID) ID() TableID {
+	return i
+}
+
 // Identifiable - талицы и связанные с ними объекты.
 type Identifiable interface {
-	Group() Group
-	Name() Name
+	ID() TableID
 }
 
 // Event - события, произошедшие при попытке обновить таблицу.
 type Event interface {
 	Identifiable
-}
-
-// TableUpdated - событие успешного обновления талицы, содержит информацию об измененных строках.
-type TableUpdated interface {
-	Event
-	Rows() interface{}
-}
-
-// ErrOccurred - событие ошибки при обновлении таблицы, содержит произошедшую ошибку.
-type ErrOccurred interface {
-	Event
-	Error() error
 }
 
 // EventConsumer - обработчик событий.
@@ -62,5 +59,5 @@ type Table interface {
 
 // Factory - фабрика для создания таблиц.
 type Factory interface {
-	NewTable(group Group, name Name) Table
+	NewTable(id TableID) Table
 }

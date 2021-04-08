@@ -35,7 +35,7 @@ func TestAfterNextISSDailyUpdate(t *testing.T) {
 }
 
 func TestTradingDayAppStart(t *testing.T) {
-	out := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	out := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	output := make(chan Command)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,7 +55,7 @@ func TestTradingDayAppStart(t *testing.T) {
 }
 
 func TestTradingDayNextUpdate(t *testing.T) {
-	out := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	out := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	timer := make(chan time.Time)
 
@@ -87,7 +87,7 @@ func TestTradingDayNextUpdate(t *testing.T) {
 
 func TestTradingDatesFirstUpdate(t *testing.T) {
 	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient)}
-	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	events := table.HandleCommand(context.Background(), &cmd)
 	assert.Equal(t, 1, len(events))
@@ -99,7 +99,7 @@ func TestTradingDatesFirstUpdate(t *testing.T) {
 func TestTradingDatesReplaceUpdate(t *testing.T) {
 	rows := []gomoex.Date{{}}
 	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient), Rows: rows}
-	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	events := table.HandleCommand(context.Background(), &cmd)
 	assert.Equal(t, 1, len(events))
@@ -112,7 +112,7 @@ func TestTradingDatesEmptyUpdate(t *testing.T) {
 	iss := gomoex.NewISSClient(http.DefaultClient)
 	rows, _ := iss.MarketDates(context.Background(), gomoex.EngineStock, gomoex.MarketShares)
 	table := TradingDates{iss: iss, Rows: rows}
-	cmd := UpdateTable{id{groupTradingDates, groupTradingDates}}
+	cmd := UpdateTable{ID{GroupTradingDates, GroupTradingDates}}
 
 	events := table.HandleCommand(context.Background(), &cmd)
 	assert.Nil(t, events)

@@ -8,47 +8,59 @@ import (
 	"poptimizer/data/domain"
 )
 
+// Repo обеспечивает хранение и загрузку таблиц.
 type Repo struct {
 	factory domain.Factory
 	db      *mongo.Database
 }
 
-func (r *Repo) Load(ctx context.Context, group domain.Group, name domain.Name) (domain.Table, error) {
-	template := r.factory.NewTable(group, name)
-	collection := r.db.Collection(string(group))
+// Disconnect корректно завершает работу базы данных, если не произошла отмена контекста.
+func (r *Repo) Disconnect(ctx context.Context) error {
+	return r.db.Client().Disconnect(ctx)
+}
 
-	err := collection.FindOne(ctx, bson.M{"_id": name}).Decode(template)
+// Load загружает или возвращает пустую новую таблицу.
+func (r *Repo) Load(ctx context.Context, id domain.TableID) (domain.Table, error) {
+	template := r.factory.NewTable(id)
+	collection := r.db.Collection(string(id.Group))
 
+	err := collection.FindOne(ctx, bson.M{"_id": id.Name}).Decode(template)
 	switch {
-	case err == mongo.ErrNoDocuments, err == nil:
+	case err == mongo.ErrNoDocuments:
+		return template, nil
+	case err == nil:
 		return template, nil
 	default:
 		return nil, err
 	}
 }
 
-func (r *Repo) ViewJOSN(ctx context.Context, group domain.Group, name domain.Name) ([]byte, error) {
-	collection := r.db.Collection(string(group))
+// ViewJOSN загружает JSON представление строк из таблицы.
+func (r *Repo) ViewJOSN(ctx context.Context, id domain.TableID) ([]byte, error) {
+	collection := r.db.Collection(string(id.Group))
 
 	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1})
-	raw, err := collection.FindOne(ctx, bson.M{"_id": name}, projections).DecodeBytes()
+	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name}, projections).DecodeBytes()
 	if err != nil {
 		return nil, err
 	}
 	return bson.MarshalExtJSON(raw, true, true)
 }
 
-func (r *Repo) Save(ctx context.Context, event domain.TableUpdated) error {
-	collection := r.db.Collection(string(event.Group()))
+// Save сохраняет результаты изменения таблицы.
+func (r *Repo) Save(ctx context.Context, event domain.Event) error {
+	id := event.ID()
+	collection := r.db.Collection(string(id.Group))
 
-	filter := bson.M{"_id": event.Name()}
+	filter := bson.M{"_id": id.Name}
 
 	var update bson.M
-	switch event.(type) {
-	case *domain.RowsReplaced:
-		update = bson.M{"$set": bson.M{"rows": event.Rows()}}
-	case *domain.RowsAppended:
-		update = bson.M{"$push": bson.M{"rows": bson.M{"$each": event.Rows()}}}
+
+	switch changes := event.(type) {
+	case domain.RowsReplaced:
+		update = bson.M{"$set": bson.M{"rows": changes.Rows}}
+	case domain.RowsAppended:
+		update = bson.M{"$push": bson.M{"rows": bson.M{"$each": changes.Rows}}}
 	}
 
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
@@ -59,15 +71,16 @@ func (r *Repo) Save(ctx context.Context, event domain.TableUpdated) error {
 	return nil
 }
 
-func NewRepo(factory domain.Factory) *Repo {
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+// NewRepo - создает новое Repo.
+func NewRepo(mongoURI string, mongoDB string, factory domain.Factory) *Repo {
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		panic("не удалось инициализировать репо")
+		panic("не удалось запустить MongoDB")
 	}
 
 	repo := Repo{
 		factory: factory,
-		db:      client.Database("new_data"),
+		db:      client.Database(mongoDB),
 	}
 	return &repo
 }

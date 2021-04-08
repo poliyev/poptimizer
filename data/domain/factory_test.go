@@ -9,7 +9,7 @@ import (
 
 func TestNewMainFactory(t *testing.T) {
 	factory := NewMainFactory(gomoex.NewISSClient(http.DefaultClient))
-	table := factory.NewTable(groupTradingDates, groupTradingDates)
+	table := factory.NewTable(ID{GroupTradingDates, GroupTradingDates})
 	_, ok := table.(*TradingDates)
 	assert.True(t, ok)
 }
@@ -17,13 +17,13 @@ func TestNewMainFactory(t *testing.T) {
 func TestNewMainPanicOnWrongGroup(t *testing.T) {
 	factory := NewMainFactory(gomoex.NewISSClient(http.DefaultClient))
 	assert.Panics(t, func() {
-		factory.NewTable("Bad", "Bad")
+		factory.NewTable(ID{"Bad", "Bad"})
 	})
 }
 
 func TestNewMainPanicOnWrongSingleton(t *testing.T) {
 	factory := NewMainFactory(gomoex.NewISSClient(http.DefaultClient))
 	assert.Panics(t, func() {
-		factory.NewTable(groupTradingDates, "Bad")
+		factory.NewTable(ID{GroupTradingDates, "Bad"})
 	})
 }

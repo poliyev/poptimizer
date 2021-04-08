@@ -10,10 +10,10 @@ type mainFactory struct {
 }
 
 // NewTable - создает таблицу и проверяет, что указано корректное имя таблицы для групп с одной таблицей.
-func (t *mainFactory) NewTable(group Group, name Name) Table {
+func (t *mainFactory) NewTable(id TableID) Table {
 	switch {
-	case group == groupTradingDates && name == groupTradingDates:
-		return &TradingDates{id: id{group, name}, iss: t.iss}
+	case id.Group == GroupTradingDates && id.Name == GroupTradingDates:
+		return &TradingDates{TableID: id, iss: t.iss}
 	default:
 		panic("Некорректное ID таблицы")
 	}
