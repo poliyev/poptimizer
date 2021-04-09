@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"github.com/WLM1ke/gomoex"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -12,7 +13,7 @@ const GroupTradingDates = "trading_dates"
 func prepareZone(zone string) *time.Location {
 	loc, err := time.LoadLocation(zone)
 	if err != nil {
-		panic("Не удалось загрузить часовой пояс Москвы")
+		zap.L().Panic("Не удалось загрузить часовой пояс Москвы", zap.Error(err))
 	}
 
 	return loc
@@ -89,12 +90,12 @@ func (t *TradingDates) HandleCommand(ctx context.Context, _ Command) []Event {
 
 	switch {
 	case err != nil:
-		panic("Не удалось получить данные ISS")
+		zap.L().Panic("Не удалось получить данные ISS", zap.Error(err))
 	case len(newRows) != 1:
-		panic("Ошибка валидации данных ISS")
+		zap.L().Panic("Ошибка валидации данных ISS", zap.Error(err))
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
 		return []Event{RowsReplaced{t.TableID, newRows}}
-	default:
-		return nil
 	}
+
+	return nil
 }

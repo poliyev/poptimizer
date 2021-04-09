@@ -20,7 +20,7 @@ func (a *App) Run(ctx context.Context) {
 		iss := adapters.NewISSClient()
 		factory := domain.NewMainFactory(iss)
 		// TODO: закрывать РЕПО
-		a.repo = adapters.NewRepo(MongoURI, mongoDB, factory)
+		a.repo = adapters.NewRepo(ctx, MongoURI, mongoDB, factory)
 	}
 
 	bus := Bus{repo: a.repo}

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 )
 
 // Типы для идентификаторов таблиц.
@@ -18,6 +19,10 @@ type TableID struct {
 
 func (i TableID) ID() TableID {
 	return i
+}
+
+func (i TableID) String() string {
+	return fmt.Sprintf("ID(%s, %s", i.Group, i.Name)
 }
 
 // Identifiable - талицы и связанные с ними объекты.

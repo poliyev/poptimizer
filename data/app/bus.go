@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
 	"sync"
@@ -19,7 +20,7 @@ type Bus struct {
 
 func (b *Bus) Run(ctx context.Context) {
 	if b.ctx != nil {
-		panic("Шина уже запущена")
+		zap.L().Panic("Шина уже запущена")
 	}
 
 	b.events = make(chan domain.Event)
@@ -51,7 +52,7 @@ func (b *Bus) Run(ctx context.Context) {
 func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 	table, err := b.repo.Load(ctx, cmd.ID())
 	if err != nil {
-		panic("Не удалось загрузить таблицу")
+		zap.L().Panic("Не удалось загрузить таблицу", zap.Stringer("table", cmd.ID()))
 	}
 	for _, event := range table.HandleCommand(ctx, cmd) {
 		b.events <- event
@@ -61,7 +62,7 @@ func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 func (b *Bus) handleOneEvent(ctx context.Context, event domain.Event) {
 	err := b.repo.Save(ctx, event)
 	if err != nil {
-		panic("Не удалось сохранить таблицу")
+		zap.L().Panic("Не удалось сохранить таблицу", zap.Stringer("table", event.ID()))
 	}
 	for _, consumer := range b.consumers {
 		consumer <- event
