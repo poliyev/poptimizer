@@ -1,12 +1,20 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-func StartLogging() {
+type Logger struct {
+}
+
+func (l Logger) Name() string {
+	return "Logger"
+}
+
+func (l Logger) Start(ctx context.Context) error {
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig = zapcore.EncoderConfig{
 		MessageKey:    "M",
@@ -27,16 +35,18 @@ func StartLogging() {
 	}
 	logger, err := config.Build()
 	if err != nil {
-		zap.L().Panic("Не удалось запустить логирование")
+		return err
 	}
+
 	zap.ReplaceGlobals(logger)
-	zap.L().Info("Логирование запущено")
+
+	return nil
 }
 
-func ShutdownLogging() {
-	zap.L().Info("Логирование остановлено")
+func (l Logger) Shutdown(ctx context.Context) error {
 	err := zap.L().Sync()
 	if err != nil && errors.Is(err, errors.New("sync /dev/stderr: inappropriate ioctl for device")) {
-		zap.L().Error("Не удалось остановить логирование", zap.Error(err))
+		return err
 	}
+	return nil
 }

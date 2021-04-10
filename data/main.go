@@ -2,30 +2,18 @@ package main
 
 import (
 	"poptimizer/data/app"
+	"time"
 )
 
 func main() {
-	app.StartLogging()
-	defer app.ShutdownLogging()
+	cfg := app.Config{
+		StartTimeout:    time.Minute,
+		ShutdownTimeout: time.Minute,
+		ServerAddr:      ":3000",
+		MongoURI:        "mongodb://localhost:27017",
+		MongoDB:         "new_data",
+	}
 
-	svr := app.RunServer()
-	defer app.StopServer(svr)
-
-	<-app.TerminationSignal()
-
-	//q := app.App{}
-	//
-	//wg := sync.WaitGroup{}
-	//wg.Add(1)
-	//go func() {
-	//	defer wg.Done()
-	//
-	//	q.Run(ctx)
-	//}()
-	//
-
-	//
-	//
-	//wg.Wait()
-
+	server := app.NewServer(cfg)
+	server.Run()
 }

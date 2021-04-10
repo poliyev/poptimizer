@@ -8,7 +8,16 @@ import (
 	"net/http"
 )
 
-func RunServer() *http.Server {
+type Server struct {
+	addr string
+	srv  *http.Server
+}
+
+func (s *Server) Name() string {
+	return "Server"
+}
+
+func (s *Server) Start(ctx context.Context) error {
 	r := chi.NewRouter()
 	// Посмотреть и добавить другие middleware
 	r.Use(middleware.Logger)
@@ -38,22 +47,22 @@ func RunServer() *http.Server {
 	// https://golang.org/src/net/http/server.go?s=64501:64553#L2068
 
 	// Добавить настройки кастомного сервера
-	srv := http.Server{Addr: ":3000", Handler: r}
+	srv := http.Server{Addr: s.addr, Handler: r}
 
 	go func() {
-		zap.L().Info("Сервер запущен")
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			zap.L().Panic("Ошибка при работе сервера", zap.Error(err))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			zap.L().Panic(s.Name(), zap.String("status", err.Error()))
 		}
 	}()
 
-	return &srv
+	s.srv = &srv
+
+	return nil
 }
 
-func StopServer(srv *http.Server) {
-	if err := srv.Shutdown(context.Background()); err != nil {
-		zap.L().Error("Ошибка остановки сервера", zap.Error(err))
-	} else {
-		zap.L().Info("Сервер остановлен")
+func (s *Server) Shutdown(ctx context.Context) error {
+	if err := s.srv.Shutdown(ctx); err != nil {
+		return err
 	}
+	return nil
 }
