@@ -60,6 +60,10 @@ type app struct {
 }
 
 func (a *app) Run() {
+	defer func() {
+		zap.L().Info("App", zap.String("status", "stopped"))
+
+	}()
 
 	appCtx := appTerminationCtx()
 
@@ -85,7 +89,12 @@ func (a *app) Run() {
 		}(module)
 	}
 
+	zap.L().Info("App", zap.String("status", "started"))
+
 	<-appCtx.Done()
+
+	zap.L().Info("App", zap.String("status", "stopping"))
+
 }
 
 func appTerminationCtx() context.Context {
@@ -93,8 +102,7 @@ func appTerminationCtx() context.Context {
 	go func() {
 		stop := make(chan os.Signal, 2)
 		signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-		sig := <-stop
-		zap.L().Info("App", zap.String("status", sig.String()))
+		<-stop
 		cancel()
 	}()
 
