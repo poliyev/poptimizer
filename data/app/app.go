@@ -15,7 +15,7 @@ import (
 //	repo *adapters.Repo
 //}
 //
-//func (a *app) Run(ctx context.Context) {
+//func (a *app) loop(loopCtx context.Context) {
 
 //
 //	bus := Bus{repo: a.repo}
@@ -31,20 +31,21 @@ import (
 //		bus.register(step)
 //	}
 //
-//	bus.Run(ctx)
+//	bus.loop(loopCtx)
 //}
 //
-//func (a app) GetJson(ctx context.Context) ([]byte, error) {
-//	return a.repo.ViewJOSN(ctx, domain.TableID{"trading_dates", "trading_dates"})
+//func (a app) GetJson(loopCtx context.Context) ([]byte, error) {
+//	return a.repo.ViewJOSN(loopCtx, domain.TableID{"trading_dates", "trading_dates"})
 //}
 
 type Config struct {
-	StartTimeout    time.Duration
-	ShutdownTimeout time.Duration
-	RequestTimeout  time.Duration
-	ServerAddr      string
-	MongoURI        string
-	MongoDB         string
+	StartTimeout     time.Duration
+	ShutdownTimeout  time.Duration
+	RequestTimeout   time.Duration
+	EventBusTimeouts time.Duration
+	ServerAddr       string
+	MongoURI         string
+	MongoDB          string
 }
 
 type Module interface {
@@ -114,9 +115,21 @@ func NewServer(cfg Config) *app {
 	factory := domain.NewMainFactory(iss)
 	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
 
+	bus := &Bus{repo: repo, handlersTimeout: cfg.EventBusTimeouts}
+	steps := []interface{}{
+		// Источники команд
+		&domain.CheckTradingDay{},
+		// Правила
+
+		// Потребители сообщений
+	}
+	for _, step := range steps {
+		bus.register(step)
+	}
 	modules := []Module{
 		&Logger{},
 		repo,
+		bus,
 		&Server{addr: cfg.ServerAddr, requestTimeout: cfg.RequestTimeout, repo: repo},
 	}
 

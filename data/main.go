@@ -7,12 +7,13 @@ import (
 
 func main() {
 	cfg := app.Config{
-		StartTimeout:    time.Minute,
-		ShutdownTimeout: time.Minute,
-		RequestTimeout:  time.Millisecond * 100,
-		ServerAddr:      "localhost:3000",
-		MongoURI:        "mongodb://localhost:27017",
-		MongoDB:         "new_data",
+		StartTimeout:     time.Minute,
+		ShutdownTimeout:  time.Minute,
+		RequestTimeout:   time.Millisecond * 100,
+		EventBusTimeouts: time.Minute,
+		ServerAddr:       "localhost:3000",
+		MongoURI:         "mongodb://localhost:27017",
+		MongoDB:          "new_data",
 	}
 
 	server := app.NewServer(cfg)

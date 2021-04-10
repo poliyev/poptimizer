@@ -23,7 +23,7 @@ func (s *Server) Name() string {
 
 func (s *Server) Start(ctx context.Context) error {
 	r := chi.NewRouter()
-	// Посмотреть и добавить другие middleware
+	// TODO: добавить другие middleware
 	// r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

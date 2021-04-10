@@ -2,7 +2,6 @@ package adapters
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -66,7 +65,6 @@ func (r *Repo) ViewJOSN(ctx context.Context, id domain.TableID) ([]byte, error) 
 
 // Save сохраняет результаты изменения таблицы.
 func (r *Repo) Save(ctx context.Context, event domain.Event) error {
-	fmt.Println(event)
 	id := event.ID()
 	collection := r.db.Collection(string(id.Group))
 
