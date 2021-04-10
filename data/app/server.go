@@ -26,6 +26,8 @@ func (s *Server) Start(ctx context.Context) error {
 	// Посмотреть и добавить другие middleware
 	// r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
 		ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
 		defer cancel()
 		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.GroupTradingDates, domain.GroupTradingDates})
@@ -36,7 +38,7 @@ func (s *Server) Start(ctx context.Context) error {
 		if err != nil {
 			zap.L().Panic(s.Name(), zap.Error(err))
 		}
-		zap.L().Info(s.Name(), zap.String("request", r.Method), zap.Int("size", size))
+		zap.L().Info(s.Name(), zap.String("request", r.Method), zap.String("uri", r.RequestURI), zap.Int("size", size), zap.Duration("time", time.Now().Sub(start)))
 	})
 
 	// Как писать JSON
