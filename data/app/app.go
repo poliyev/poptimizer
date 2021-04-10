@@ -41,6 +41,7 @@ import (
 type Config struct {
 	StartTimeout    time.Duration
 	ShutdownTimeout time.Duration
+	RequestTimeout  time.Duration
 	ServerAddr      string
 	MongoURI        string
 	MongoDB         string
@@ -65,9 +66,6 @@ func (a *app) Run() {
 	startCtx, startCancel := context.WithTimeout(appCtx, a.startTimeout)
 	defer startCancel()
 
-	shutdownTimeout, shutdownCancel := context.WithTimeout(context.Background(), a.shutdownTimeout)
-	defer shutdownCancel()
-
 	for _, module := range a.modules {
 		if err := module.Start(startCtx); err != nil {
 			zap.L().Panic(module.Name(), zap.String("status", err.Error()))
@@ -76,6 +74,9 @@ func (a *app) Run() {
 		}
 
 		defer func(module Module) {
+			shutdownTimeout, shutdownCancel := context.WithTimeout(context.Background(), a.shutdownTimeout)
+			defer shutdownCancel()
+
 			if err := module.Shutdown(shutdownTimeout); err != nil {
 				zap.L().Error(module.Name(), zap.String("status", err.Error()))
 			} else {
@@ -108,7 +109,7 @@ func NewServer(cfg Config) *app {
 	modules := []Module{
 		&Logger{},
 		repo,
-		&Server{addr: cfg.ServerAddr, repo: repo},
+		&Server{addr: cfg.ServerAddr, requestTimeout: cfg.RequestTimeout, repo: repo},
 	}
 
 	return &app{

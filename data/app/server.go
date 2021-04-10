@@ -3,17 +3,18 @@ package app
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 	"net/http"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
+	"time"
 )
 
 type Server struct {
-	addr string
-	srv  *http.Server
-	repo *adapters.Repo
+	addr           string
+	requestTimeout time.Duration
+	srv            *http.Server
+	repo           *adapters.Repo
 }
 
 func (s *Server) Name() string {
@@ -23,8 +24,10 @@ func (s *Server) Name() string {
 func (s *Server) Start(ctx context.Context) error {
 	r := chi.NewRouter()
 	// Посмотреть и добавить другие middleware
-	r.Use(middleware.Logger)
+	// r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
+		defer cancel()
 		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.GroupTradingDates, domain.GroupTradingDates})
 		if err != nil {
 			zap.L().Panic(s.Name(), zap.Error(err))
