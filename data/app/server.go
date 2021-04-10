@@ -6,11 +6,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 	"net/http"
+	"poptimizer/data/adapters"
+	"poptimizer/data/domain"
 )
 
 type Server struct {
 	addr string
 	srv  *http.Server
+	repo *adapters.Repo
 }
 
 func (s *Server) Name() string {
@@ -22,8 +25,15 @@ func (s *Server) Start(ctx context.Context) error {
 	// Посмотреть и добавить другие middleware
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		// res, _ := q.GetJson(ctx)
-		w.Write([]byte("Hi!"))
+		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.GroupTradingDates, domain.GroupTradingDates})
+		if err != nil {
+			zap.L().Panic(s.Name(), zap.Error(err))
+		}
+		size, err := w.Write(res)
+		if err != nil {
+			zap.L().Panic(s.Name(), zap.Error(err))
+		}
+		zap.L().Info(s.Name(), zap.String("request", r.Method), zap.Int("size", size))
 	})
 
 	// Как писать JSON

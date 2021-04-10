@@ -6,14 +6,34 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.uber.org/zap"
 	"poptimizer/data/domain"
 )
 
 // Repo обеспечивает хранение и загрузку таблиц.
 type Repo struct {
 	factory domain.Factory
+	uri     string
+	dbName  string
 	db      *mongo.Database
+}
+
+func (r *Repo) Name() string {
+	return "Repo"
+}
+
+func (r *Repo) Start(ctx context.Context) error {
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(r.uri))
+	if err != nil {
+		return err
+	}
+
+	r.db = client.Database(r.dbName)
+
+	return nil
+}
+
+func (r *Repo) Shutdown(ctx context.Context) error {
+	return r.db.Client().Disconnect(ctx)
 }
 
 // Load загружает или возвращает пустую новую таблицу.
@@ -70,26 +90,12 @@ func (r *Repo) Save(ctx context.Context, event domain.Event) error {
 }
 
 // NewRepo - создает новое Repo.
-func NewRepo(ctx context.Context, mongoURI string, mongoDB string, factory domain.Factory) *Repo {
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-	if err != nil {
-		zap.L().Panic("Не удалось запустить MongoDB", zap.Error(err))
-	}
-	zap.L().Info("MongoDB работает", zap.Error(err))
-
+func NewRepo(mongoURI string, mongoDB string, factory domain.Factory) *Repo {
 	repo := Repo{
+		uri:     mongoURI,
+		dbName:  mongoDB,
 		factory: factory,
-		db:      client.Database(mongoDB),
 	}
-
-	go func() {
-		<-ctx.Done()
-		if client.Disconnect(context.Background()) != nil {
-			zap.L().Error("Не удалось остановить MongoDB", zap.Error(err))
-		} else {
-			zap.L().Info("Завершена остановка MongoDB", zap.Error(err))
-		}
-	}()
 
 	return &repo
 }

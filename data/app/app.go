@@ -5,6 +5,8 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"os/signal"
+	"poptimizer/data/adapters"
+	"poptimizer/data/domain"
 	"syscall"
 	"time"
 )
@@ -14,12 +16,7 @@ import (
 //}
 //
 //func (a *app) Run(ctx context.Context) {
-//	if a.repo == nil {
-//		iss := adapters.NewISSClient()
-//		factory := domain.NewMainFactory(iss)
-//		// TODO: закрывать РЕПО
-//		a.repo = adapters.NewRepo(ctx, MongoURI, mongoDB, factory)
-//	}
+
 //
 //	bus := Bus{repo: a.repo}
 //
@@ -104,9 +101,15 @@ func appTerminationCtx() context.Context {
 }
 
 func NewServer(cfg Config) *app {
+	iss := adapters.NewISSClient()
+	factory := domain.NewMainFactory(iss)
+	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
+
 	modules := []Module{
-		Logger{},
-		&Server{addr: cfg.ServerAddr}}
+		&Logger{},
+		repo,
+		&Server{addr: cfg.ServerAddr, repo: repo},
+	}
 
 	return &app{
 		startTimeout:    cfg.StartTimeout,

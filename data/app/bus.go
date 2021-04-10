@@ -19,10 +19,6 @@ type Bus struct {
 }
 
 func (b *Bus) Run(ctx context.Context) {
-	if b.ctx != nil {
-		zap.L().Panic("Шина уже запущена")
-	}
-
 	b.events = make(chan domain.Event)
 	b.ctx = ctx
 
