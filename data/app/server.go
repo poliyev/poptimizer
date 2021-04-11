@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 	"net/http"
 	"poptimizer/data/adapters"
@@ -21,24 +22,44 @@ func (s *Server) Name() string {
 	return "Server"
 }
 
+func (s *Server) logger(handler http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		start := time.Now()
+
+		defer func() {
+			zap.L().Info(
+				s.Name(),
+				zap.String("request", r.Method),
+				zap.String("uri", r.RequestURI),
+				zap.Int("status", ww.Status()),
+				zap.Int("size", ww.BytesWritten()),
+				zap.Duration("time", time.Since(start)))
+		}()
+
+		handler.ServeHTTP(ww, r)
+
+	})
+
+}
+
 func (s *Server) Start(ctx context.Context) error {
 	r := chi.NewRouter()
 	// TODO: добавить другие middleware
-	// r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
+	r.Use(s.logger)
+	r.Use(middleware.RedirectSlashes)
+	r.Get("/{group}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
 		defer cancel()
-		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.GroupTradingDates, domain.GroupTradingDates})
+		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.Group(chi.URLParam(r, "group")), domain.Name(chi.URLParam(r, "name"))})
 		if err != nil {
 			zap.L().Panic(s.Name(), zap.Error(err))
 		}
-		size, err := w.Write(res)
+		_, err = w.Write(res)
 		if err != nil {
 			zap.L().Panic(s.Name(), zap.Error(err))
 		}
-		zap.L().Info(s.Name(), zap.String("request", r.Method), zap.String("uri", r.RequestURI), zap.Int("size", size), zap.Duration("time", time.Now().Sub(start)))
 	})
 
 	// Как писать JSON
