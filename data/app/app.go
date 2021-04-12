@@ -44,6 +44,7 @@ type Config struct {
 	RequestTimeout   time.Duration
 	EventBusTimeouts time.Duration
 	ServerAddr       string
+	ISSMaxCons       int
 	MongoURI         string
 	MongoDB          string
 }
@@ -111,7 +112,7 @@ func appTerminationCtx() context.Context {
 }
 
 func NewServer(cfg Config) *app {
-	iss := adapters.NewISSClient()
+	iss := adapters.NewISSClient(cfg.ISSMaxCons)
 	factory := domain.NewMainFactory(iss)
 	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
 
@@ -127,7 +128,7 @@ func NewServer(cfg Config) *app {
 		bus.register(step)
 	}
 	modules := []Module{
-		&Logger{},
+		adapters.NewLogger(),
 		repo,
 		bus,
 		&Server{addr: cfg.ServerAddr, requestTimeout: cfg.RequestTimeout, repo: repo},

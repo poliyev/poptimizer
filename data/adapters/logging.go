@@ -1,4 +1,4 @@
-package app
+package adapters
 
 import (
 	"context"
@@ -7,14 +7,18 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Logger struct {
+type logger struct {
 }
 
-func (l Logger) Name() string {
-	return "Logger"
+func NewLogger() *logger {
+	return &logger{}
 }
 
-func (l Logger) Start(ctx context.Context) error {
+func (l logger) Name() string {
+	return "logger"
+}
+
+func (l logger) Start(ctx context.Context) error {
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig = zapcore.EncoderConfig{
 		MessageKey:    "M",
@@ -43,7 +47,7 @@ func (l Logger) Start(ctx context.Context) error {
 	return nil
 }
 
-func (l Logger) Shutdown(ctx context.Context) error {
+func (l logger) Shutdown(ctx context.Context) error {
 	err := zap.L().Sync()
 	if err != nil && errors.Is(err, errors.New("sync /dev/stderr: inappropriate ioctl for device")) {
 		return err
