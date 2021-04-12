@@ -12,7 +12,7 @@ import (
 )
 
 //type app struct {
-//	repo *adapters.Repo
+//	repo *adapters.repo
 //}
 //
 //func (a *app) loop(loopCtx context.Context) {
@@ -35,7 +35,7 @@ import (
 //}
 //
 //func (a app) GetJson(loopCtx context.Context) ([]byte, error) {
-//	return a.repo.ViewJOSN(loopCtx, domain.TableID{"trading_dates", "trading_dates"})
+//	return a.repo.JSONViewer(loopCtx, domain.TableID{"trading_dates", "trading_dates"})
 //}
 
 type Config struct {

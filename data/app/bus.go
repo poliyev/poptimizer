@@ -10,7 +10,7 @@ import (
 )
 
 type Bus struct {
-	repo            *adapters.Repo
+	repo            adapters.TableRepo
 	handlersTimeout time.Duration
 
 	commands  chan domain.Command

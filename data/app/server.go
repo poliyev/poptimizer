@@ -16,7 +16,7 @@ type Server struct {
 	addr           string
 	requestTimeout time.Duration
 	srv            *http.Server
-	repo           *adapters.Repo
+	repo           adapters.JSONViewer
 }
 
 func (s *Server) Name() string {
@@ -53,7 +53,7 @@ func (s *Server) Start(ctx context.Context) error {
 	router.Get("/{group}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
 		defer cancel()
-		res, err := s.repo.ViewJOSN(ctx, domain.TableID{domain.Group(chi.URLParam(r, "group")), domain.Name(chi.URLParam(r, "name"))})
+		res, err := s.repo.ViewJSON(ctx, domain.TableID{domain.Group(chi.URLParam(r, "group")), domain.Name(chi.URLParam(r, "name"))})
 		if err == mongo.ErrNoDocuments {
 			router.NotFoundHandler()(w, r)
 			return

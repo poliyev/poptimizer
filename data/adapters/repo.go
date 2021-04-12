@@ -8,19 +8,32 @@ import (
 	"poptimizer/data/domain"
 )
 
-// Repo обеспечивает хранение и загрузку таблиц.
-type Repo struct {
+// repo обеспечивает хранение и загрузку таблиц.
+type repo struct {
 	factory domain.Factory
 	uri     string
 	dbName  string
 	db      *mongo.Database
 }
 
-func (r *Repo) Name() string {
-	return "Repo"
+// NewRepo - создает новое repo.
+func NewRepo(mongoURI string, mongoDB string, factory domain.Factory) *repo {
+	repo := repo{
+		uri:     mongoURI,
+		dbName:  mongoDB,
+		factory: factory,
+	}
+
+	return &repo
 }
 
-func (r *Repo) Start(ctx context.Context) error {
+// Name - наименование в рамках интерфейса модуля.
+func (r *repo) Name() string {
+	return "repo"
+}
+
+// Start запускает модуль репозитория.
+func (r *repo) Start(ctx context.Context) error {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(r.uri))
 	if err != nil {
 		return err
@@ -31,12 +44,13 @@ func (r *Repo) Start(ctx context.Context) error {
 	return nil
 }
 
-func (r *Repo) Shutdown(ctx context.Context) error {
+// Shutdown останавливает модуль репозитория.
+func (r *repo) Shutdown(ctx context.Context) error {
 	return r.db.Client().Disconnect(ctx)
 }
 
-// Load загружает или возвращает пустую новую таблицу.
-func (r *Repo) Load(ctx context.Context, id domain.TableID) (domain.Table, error) {
+// Load загружает сохраненную или возвращает пустую новую таблицу.
+func (r *repo) Load(ctx context.Context, id domain.TableID) (domain.Table, error) {
 	template := r.factory.NewTable(id)
 	collection := r.db.Collection(string(id.Group))
 
@@ -51,20 +65,8 @@ func (r *Repo) Load(ctx context.Context, id domain.TableID) (domain.Table, error
 	}
 }
 
-// ViewJOSN загружает JSON представление строк из таблицы.
-func (r *Repo) ViewJOSN(ctx context.Context, id domain.TableID) ([]byte, error) {
-	collection := r.db.Collection(string(id.Group))
-
-	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1})
-	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name}, projections).DecodeBytes()
-	if err != nil {
-		return nil, err
-	}
-	return bson.MarshalExtJSON(raw, true, true)
-}
-
 // Save сохраняет результаты изменения таблицы.
-func (r *Repo) Save(ctx context.Context, event domain.Event) error {
+func (r *repo) Save(ctx context.Context, event domain.Event) error {
 	id := event.ID()
 	collection := r.db.Collection(string(id.Group))
 
@@ -87,13 +89,14 @@ func (r *Repo) Save(ctx context.Context, event domain.Event) error {
 	return nil
 }
 
-// NewRepo - создает новое Repo.
-func NewRepo(mongoURI string, mongoDB string, factory domain.Factory) *Repo {
-	repo := Repo{
-		uri:     mongoURI,
-		dbName:  mongoDB,
-		factory: factory,
-	}
+// ViewJSON загружает ExtendedJSON представление строк из таблицы.
+func (r *repo) ViewJSON(ctx context.Context, id domain.TableID) ([]byte, error) {
+	collection := r.db.Collection(string(id.Group))
 
-	return &repo
+	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1})
+	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name}, projections).DecodeBytes()
+	if err != nil {
+		return nil, err
+	}
+	return bson.MarshalExtJSON(raw, true, true)
 }
