@@ -12,6 +12,7 @@ func main() {
 		RequestTimeout:   time.Millisecond * 100,
 		EventBusTimeouts: time.Minute,
 		ServerAddr:       "localhost:3000",
+		ISSMaxCons:       20,
 		MongoURI:         "mongodb://localhost:27017",
 		MongoDB:          "new_data",
 	}
