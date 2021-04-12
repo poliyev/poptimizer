@@ -29,7 +29,7 @@ func NewRepo(mongoURI string, mongoDB string, factory domain.Factory) *repo {
 
 // Name - наименование в рамках интерфейса модуля.
 func (r *repo) Name() string {
-	return "repo"
+	return "Repo"
 }
 
 // Start запускает модуль репозитория.

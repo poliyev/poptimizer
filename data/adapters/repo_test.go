@@ -10,16 +10,18 @@ import (
 	"time"
 )
 
-func prepareRepo() *Repo {
-	iss := NewISSClient()
+func prepareRepo() *repo {
+	iss := NewISSClient(20)
 	factory := domain.NewMainFactory(iss)
-	return NewRepo("mongodb://localhost:27017", "test", factory)
+	repo := NewRepo("mongodb://localhost:27017", "test", factory)
+	repo.Start(context.Background())
+	return repo
 }
 
-func cleanRepo(repo *Repo) {
+func cleanRepo(repo *repo) {
 	ctx := context.Background()
 	repo.db.Drop(ctx)
-	repo.Disconnect(ctx)
+	repo.Shutdown(ctx)
 }
 
 var testID = domain.TableID{"trading_dates", "trading_dates"}
@@ -108,7 +110,7 @@ func TestRepoJsonNoDoc(t *testing.T) {
 	repo := prepareRepo()
 	defer cleanRepo(repo)
 
-	json, err := repo.ViewJOSN(context.Background(), testID)
+	json, err := repo.ViewJSON(context.Background(), testID)
 
 	assert.Nil(t, json)
 	assert.Equal(t, mongo.ErrNoDocuments, err)
@@ -125,7 +127,7 @@ func TestRepoJsonWithDoc(t *testing.T) {
 		t.Error("Не удалось сохранить таблицу")
 	}
 
-	json, err := repo.ViewJOSN(context.Background(), testID)
+	json, err := repo.ViewJSON(context.Background(), testID)
 
 	assert.Equal(t, []byte(out), json)
 	assert.Nil(t, err)
