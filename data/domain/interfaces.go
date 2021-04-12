@@ -17,6 +17,10 @@ type TableID struct {
 	Name  Name
 }
 
+func NewTableID(group string, name string) TableID {
+	return TableID{Group(group), Name(name)}
+}
+
 func (i TableID) ID() TableID {
 	return i
 }

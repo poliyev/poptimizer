@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Bus struct {
+type bus struct {
 	repo            adapters.TableRepo
 	handlersTimeout time.Duration
 
@@ -23,11 +23,29 @@ type Bus struct {
 	loopStopped chan interface{}
 }
 
-func (b *Bus) Name() string {
+func NewBus(repo adapters.TableRepo, handlersTimeout time.Duration) *bus {
+	bus := bus{
+		repo:            repo,
+		handlersTimeout: handlersTimeout,
+	}
+	steps := []interface{}{
+		// Источники команд
+		&domain.CheckTradingDay{},
+		// Правила
+
+		// Потребители сообщений
+	}
+	for _, step := range steps {
+		bus.Register(step)
+	}
+	return &bus
+}
+
+func (b *bus) Name() string {
 	return "BUS"
 }
 
-func (b *Bus) Start(_ context.Context) error {
+func (b *bus) Start(_ context.Context) error {
 	go func() {
 		b.loop(b.loopCtx)
 		close(b.loopStopped)
@@ -35,7 +53,7 @@ func (b *Bus) Start(_ context.Context) error {
 	return nil
 }
 
-func (b *Bus) Shutdown(ctx context.Context) error {
+func (b *bus) Shutdown(ctx context.Context) error {
 	b.loopCancel()
 
 	select {
@@ -46,7 +64,7 @@ func (b *Bus) Shutdown(ctx context.Context) error {
 	}
 }
 
-func (b *Bus) loop(ctx context.Context) {
+func (b *bus) loop(ctx context.Context) {
 	b.events = make(chan domain.Event)
 
 	for {
@@ -72,7 +90,7 @@ func (b *Bus) loop(ctx context.Context) {
 	}
 }
 
-func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
+func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 	ctx, cancel := context.WithTimeout(context.Background(), b.handlersTimeout)
 	defer cancel()
 
@@ -85,7 +103,7 @@ func (b *Bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 	}
 }
 
-func (b *Bus) handleOneEvent(ctx context.Context, event domain.Event) {
+func (b *bus) handleOneEvent(ctx context.Context, event domain.Event) {
 	ctx, cancel := context.WithTimeout(context.Background(), b.handlersTimeout)
 	defer cancel()
 
@@ -98,7 +116,7 @@ func (b *Bus) handleOneEvent(ctx context.Context, event domain.Event) {
 	}
 }
 
-func (b *Bus) register(step interface{}) {
+func (b *bus) Register(step interface{}) {
 	if b.commands == nil {
 		b.commands = make(chan domain.Command)
 		ctx, loopCancel := context.WithCancel(context.Background())

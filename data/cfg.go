@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"context"
@@ -6,37 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"poptimizer/data/adapters"
+	"poptimizer/data/app"
 	"poptimizer/data/domain"
+	"poptimizer/data/ports"
 	"syscall"
 	"time"
 )
-
-//type app struct {
-//	repo *adapters.repo
-//}
-//
-//func (a *app) loop(loopCtx context.Context) {
-
-//
-//	bus := Bus{repo: a.repo}
-//
-//	steps := []interface{}{
-//		// Источники команд
-//		&domain.CheckTradingDay{},
-//		// Правила
-//
-//		// Потребители сообщений
-//	}
-//	for _, step := range steps {
-//		bus.register(step)
-//	}
-//
-//	bus.loop(loopCtx)
-//}
-//
-//func (a app) GetJson(loopCtx context.Context) ([]byte, error) {
-//	return a.repo.JSONViewer(loopCtx, domain.TableID{"trading_dates", "trading_dates"})
-//}
 
 type Config struct {
 	StartTimeout     time.Duration
@@ -55,13 +30,13 @@ type Module interface {
 	Shutdown(ctx context.Context) error
 }
 
-type app struct {
+type App struct {
 	startTimeout    time.Duration
 	shutdownTimeout time.Duration
 	modules         []Module
 }
 
-func (a *app) Run() {
+func (a *App) Run() {
 	defer func() {
 		zap.L().Info("App", zap.String("status", "stopped"))
 
@@ -111,30 +86,20 @@ func appTerminationCtx() context.Context {
 	return ctx
 }
 
-func NewServer(cfg Config) *app {
+func NewApp(cfg Config) *App {
 	iss := adapters.NewISSClient(cfg.ISSMaxCons)
 	factory := domain.NewMainFactory(iss)
 	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
+	bus := app.NewBus(repo, cfg.EventBusTimeouts)
 
-	bus := &Bus{repo: repo, handlersTimeout: cfg.EventBusTimeouts}
-	steps := []interface{}{
-		// Источники команд
-		&domain.CheckTradingDay{},
-		// Правила
-
-		// Потребители сообщений
-	}
-	for _, step := range steps {
-		bus.register(step)
-	}
 	modules := []Module{
 		adapters.NewLogger(),
 		repo,
 		bus,
-		&Server{addr: cfg.ServerAddr, requestTimeout: cfg.RequestTimeout, repo: repo},
+		ports.NewServer(cfg.ServerAddr, cfg.RequestTimeout, repo),
 	}
 
-	return &app{
+	return &App{
 		startTimeout:    cfg.StartTimeout,
 		shutdownTimeout: cfg.ShutdownTimeout,
 		modules:         modules,
