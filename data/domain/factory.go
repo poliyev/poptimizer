@@ -2,6 +2,7 @@ package domain
 
 import (
 	"github.com/WLM1ke/gomoex"
+	"go.uber.org/zap"
 )
 
 // mainFactory создает любые таблицы.
@@ -15,7 +16,8 @@ func (t *mainFactory) NewTable(id TableID) Table {
 	case id.Group == GroupTradingDates && id.Name == GroupTradingDates:
 		return &TradingDates{TableID: id, iss: t.iss}
 	default:
-		panic("Некорректное ID таблицы")
+		zap.L().Panic("Некорректное ID таблицы", zap.Stringer("id", id))
+		return nil
 	}
 }
 
