@@ -108,7 +108,7 @@ func (b *bus) loop(ctx context.Context) {
 // handleOneCommand - загружает таблицу, вызывает обработчик команды и направляет возникшие события в очередь.
 func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 	zap.L().Info("Command", zap.Stringer("table", cmd.ID()))
-	ctx, cancel := context.WithTimeout(b.loopCtx, b.handlersTimeouts)
+	ctx, cancel := context.WithTimeout(ctx, b.handlersTimeouts)
 	defer cancel()
 
 	table, err := b.repo.Load(ctx, cmd.ID())
@@ -123,7 +123,7 @@ func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 // handleOneEvent - сохраняет событие, а после этого рассылает его всем потребителям событий.
 func (b *bus) handleOneEvent(ctx context.Context, event domain.Event) {
 	zap.L().Info("Event", zap.Stringer("table", event.ID()))
-	ctx, cancel := context.WithTimeout(b.loopCtx, b.handlersTimeouts)
+	ctx, cancel := context.WithTimeout(ctx, b.handlersTimeouts)
 	defer cancel()
 
 	err := b.repo.Save(ctx, event)

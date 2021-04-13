@@ -88,7 +88,7 @@ func (a *App) shutdownModules() {
 	defer cancel()
 
 	modules := a.modules
-	for n, _ := range modules {
+	for n := range modules {
 		module := modules[len(modules)-1-n]
 
 		if err := module.Shutdown(ctx); err != nil {

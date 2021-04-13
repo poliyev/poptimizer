@@ -10,26 +10,32 @@ import (
 	"time"
 )
 
-func prepareRepo() *repo {
+func prepareRepo(t *testing.T) *repo {
 	iss := NewISSClient(20)
 	factory := domain.NewMainFactory(iss)
 	repo := NewRepo("mongodb://localhost:27017", "test", factory)
-	repo.Start(context.Background())
+	if repo.Start(context.Background()) != nil {
+		t.Error("Не удалось запустить тестовую репозиторий.")
+	}
 	return repo
 }
 
-func cleanRepo(repo *repo) {
+func cleanRepo(t *testing.T, repo *repo) {
 	ctx := context.Background()
-	repo.db.Drop(ctx)
-	repo.Shutdown(ctx)
+	if repo.db.Drop(ctx) != nil {
+		t.Error("Не удалось удалить тестовую базу.")
+	}
+	if repo.Shutdown(ctx) != nil {
+		t.Error("Не удалось завершить работу репозитория.")
+	}
 }
 
-var testID = domain.TableID{"trading_dates", "trading_dates"}
-var testRow = gomoex.Date{time.Time{}, time.Time{}.AddDate(1, 0, 0)}
+var testID = domain.NewTableID("trading_dates", "trading_dates")
+var testRow = gomoex.Date{From: time.Time{}, Till: time.Time{}.AddDate(1, 0, 0)}
 
 func TestRepoLoadAbsentTable(t *testing.T) {
-	repo := prepareRepo()
-	defer cleanRepo(repo)
+	repo := prepareRepo(t)
+	defer cleanRepo(t, repo)
 
 	table, err := repo.Load(context.Background(), testID)
 	if err != nil {
@@ -46,10 +52,10 @@ func TestRepoLoadAbsentTable(t *testing.T) {
 }
 
 func TestRepoSaveReplaceEvent(t *testing.T) {
-	repo := prepareRepo()
-	defer cleanRepo(repo)
+	repo := prepareRepo(t)
+	defer cleanRepo(t, repo)
 
-	event := domain.RowsReplaced{testID, []gomoex.Date{testRow}}
+	event := domain.RowsReplaced{TableID: testID, Rows: []gomoex.Date{testRow}}
 
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
@@ -77,10 +83,10 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 }
 
 func TestRepoSaveAppendEvent(t *testing.T) {
-	repo := prepareRepo()
-	defer cleanRepo(repo)
+	repo := prepareRepo(t)
+	defer cleanRepo(t, repo)
 
-	event := domain.RowsAppended{testID, []gomoex.Date{testRow}}
+	event := domain.RowsAppended{TableID: testID, Rows: []gomoex.Date{testRow}}
 
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
@@ -107,8 +113,8 @@ func TestRepoSaveAppendEvent(t *testing.T) {
 }
 
 func TestRepoJsonNoDoc(t *testing.T) {
-	repo := prepareRepo()
-	defer cleanRepo(repo)
+	repo := prepareRepo(t)
+	defer cleanRepo(t, repo)
 
 	json, err := repo.ViewJSON(context.Background(), testID)
 
@@ -119,10 +125,10 @@ func TestRepoJsonNoDoc(t *testing.T) {
 func TestRepoJsonWithDoc(t *testing.T) {
 	out := `{"rows":[{"from":{"$date":{"$numberLong":"-62135596800000"}},"till":{"$date":{"$numberLong":"-62104060800000"}}}]}`
 
-	repo := prepareRepo()
-	defer cleanRepo(repo)
+	repo := prepareRepo(t)
+	defer cleanRepo(t, repo)
 
-	event := domain.RowsReplaced{testID, []gomoex.Date{testRow}}
+	event := domain.RowsReplaced{TableID: testID, Rows: []gomoex.Date{testRow}}
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
 	}
