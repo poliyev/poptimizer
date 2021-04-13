@@ -1,15 +1,12 @@
-package main
+package cfg
 
 import (
 	"context"
 	"go.uber.org/zap"
-	"os"
-	"os/signal"
 	"poptimizer/data/adapters"
 	"poptimizer/data/app"
 	"poptimizer/data/domain"
 	"poptimizer/data/ports"
-	"syscall"
 	"time"
 )
 
@@ -24,16 +21,30 @@ type Config struct {
 	MongoDB          string
 }
 
-type Module interface {
-	Name() string
-	Start(ctx context.Context) error
-	Shutdown(ctx context.Context) error
-}
-
 type App struct {
 	startTimeout    time.Duration
 	shutdownTimeout time.Duration
 	modules         []Module
+}
+
+func NewApp(cfg Config) *App {
+	iss := adapters.NewISSClient(cfg.ISSMaxCons)
+	factory := domain.NewMainFactory(iss)
+	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
+	bus := app.NewBus(repo, cfg.EventBusTimeouts)
+
+	modules := []Module{
+		adapters.NewLogger(),
+		repo,
+		bus,
+		ports.NewServer(cfg.ServerAddr, cfg.RequestTimeout, repo),
+	}
+
+	return &App{
+		startTimeout:    cfg.StartTimeout,
+		shutdownTimeout: cfg.ShutdownTimeout,
+		modules:         modules,
+	}
 }
 
 func (a *App) Run() {
@@ -72,36 +83,4 @@ func (a *App) Run() {
 
 	zap.L().Info("App", zap.String("status", "stopping"))
 
-}
-
-func appTerminationCtx() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		stop := make(chan os.Signal, 2)
-		signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-		<-stop
-		cancel()
-	}()
-
-	return ctx
-}
-
-func NewApp(cfg Config) *App {
-	iss := adapters.NewISSClient(cfg.ISSMaxCons)
-	factory := domain.NewMainFactory(iss)
-	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
-	bus := app.NewBus(repo, cfg.EventBusTimeouts)
-
-	modules := []Module{
-		adapters.NewLogger(),
-		repo,
-		bus,
-		ports.NewServer(cfg.ServerAddr, cfg.RequestTimeout, repo),
-	}
-
-	return &App{
-		startTimeout:    cfg.StartTimeout,
-		shutdownTimeout: cfg.ShutdownTimeout,
-		modules:         modules,
-	}
 }

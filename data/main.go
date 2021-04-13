@@ -1,11 +1,12 @@
 package main
 
 import (
+	cfg2 "poptimizer/data/cfg"
 	"time"
 )
 
 func main() {
-	cfg := Config{
+	cfg := cfg2.Config{
 		StartTimeout:     time.Minute,
 		ShutdownTimeout:  time.Minute,
 		RequestTimeout:   time.Microsecond * 600,
@@ -16,6 +17,6 @@ func main() {
 		MongoDB:          "new_data",
 	}
 
-	app := NewApp(cfg)
+	app := cfg2.NewApp(cfg)
 	app.Run()
 }
