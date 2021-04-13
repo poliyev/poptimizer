@@ -7,26 +7,23 @@ import (
 	"time"
 )
 
-func ZapLoggingMiddleware(name string) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
+func zapLoggingMiddleware(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		start := time.Now()
 
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-			start := time.Now()
+		defer func() {
+			zap.L().Info(
+				"Request",
+				zap.String("method", r.Method),
+				zap.String("uri", r.RequestURI),
+				zap.Int("status", ww.Status()),
+				zap.Int("size", ww.BytesWritten()),
+				zap.Duration("time", time.Since(start)))
+		}()
 
-			defer func() {
-				zap.L().Info(
-					name,
-					zap.String("request", r.Method),
-					zap.String("uri", r.RequestURI),
-					zap.Int("status", ww.Status()),
-					zap.Int("size", ww.BytesWritten()),
-					zap.Duration("time", time.Since(start)))
-			}()
+		next.ServeHTTP(ww, r)
 
-			next.ServeHTTP(ww, r)
-
-		}
-		return http.HandlerFunc(fn)
 	}
+	return http.HandlerFunc(fn)
 }
