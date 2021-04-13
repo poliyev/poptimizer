@@ -10,8 +10,8 @@ import (
 )
 
 type bus struct {
-	repo            adapters.TableRepo
-	handlersTimeout time.Duration
+	repo             adapters.TableRepo
+	handlersTimeouts time.Duration
 
 	commands  chan domain.Command
 	events    chan domain.Event
@@ -20,13 +20,26 @@ type bus struct {
 	wg          sync.WaitGroup
 	loopCtx     context.Context
 	loopCancel  context.CancelFunc
-	loopStopped chan interface{}
+	loopStopped chan struct{}
 }
 
-func NewBus(repo adapters.TableRepo, handlersTimeout time.Duration) *bus {
+// NewBus - создает шину для обработки команд и событий, поддерживающую интерфейс модуля приложения.
+//
+// Регистрирует все шаги бизнес-логики — источники команд, правила обработки доменных событий и потребителей событий.
+// Процесс работы шины поддерживает данные в актуальном состоянии.
+func NewBus(repo adapters.TableRepo, EventBusTimeouts time.Duration) *bus {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	bus := bus{
-		repo:            repo,
-		handlersTimeout: handlersTimeout,
+		repo:             repo,
+		handlersTimeouts: EventBusTimeouts,
+
+		commands: make(chan domain.Command),
+		events:   make(chan domain.Event),
+
+		loopCtx:     ctx,
+		loopCancel:  cancel,
+		loopStopped: make(chan struct{}),
 	}
 	steps := []interface{}{
 		// Источники команд
@@ -36,23 +49,27 @@ func NewBus(repo adapters.TableRepo, handlersTimeout time.Duration) *bus {
 		// Потребители сообщений
 	}
 	for _, step := range steps {
-		bus.Register(step)
+		bus.register(step)
 	}
+
 	return &bus
 }
 
+// Name - модуль приложения Bus.
 func (b *bus) Name() string {
-	return "BUS"
+	return "Bus"
 }
 
+// Start - запускает основной цикл обработки команд и событий.
 func (b *bus) Start(_ context.Context) error {
 	go func() {
 		b.loop(b.loopCtx)
-		close(b.loopStopped)
 	}()
+
 	return nil
 }
 
+// Shutdown - завершает работу основного цикла обработки команд и событий.
 func (b *bus) Shutdown(ctx context.Context) error {
 	b.loopCancel()
 
@@ -60,24 +77,21 @@ func (b *bus) Shutdown(ctx context.Context) error {
 	case <-b.loopStopped:
 		return nil
 	case <-ctx.Done():
-		return context.DeadlineExceeded
+		return ctx.Err()
 	}
 }
 
+// loop осуществляет вызов обработчиков команд и событий при их наличии до отмены контекста цикла.
 func (b *bus) loop(ctx context.Context) {
-	b.events = make(chan domain.Event)
-
 	for {
 		b.wg.Add(1)
 		select {
 		case cmd := <-b.commands:
-			zap.L().Info(b.Name(), zap.Stringer("cmd", cmd.ID()))
 			go func() {
 				defer b.wg.Done()
 				b.handleOneCommand(ctx, cmd)
 			}()
 		case event := <-b.events:
-			zap.L().Info(b.Name(), zap.Stringer("event", event.ID()))
 			go func() {
 				defer b.wg.Done()
 				go b.handleOneEvent(ctx, event)
@@ -85,46 +99,45 @@ func (b *bus) loop(ctx context.Context) {
 		case <-ctx.Done():
 			b.wg.Done()
 			b.wg.Wait()
+			close(b.loopStopped)
 			return
 		}
 	}
 }
 
+// handleOneCommand - загружает таблицу, вызывает обработчик команды и направляет возникшие события в очередь.
 func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
-	ctx, cancel := context.WithTimeout(context.Background(), b.handlersTimeout)
+	zap.L().Info("Command", zap.Stringer("table", cmd.ID()))
+	ctx, cancel := context.WithTimeout(b.loopCtx, b.handlersTimeouts)
 	defer cancel()
 
 	table, err := b.repo.Load(ctx, cmd.ID())
 	if err != nil {
-		zap.L().Panic(b.Name(), zap.Stringer("load", cmd.ID()), zap.Error(err))
+		zap.L().Panic("Command", zap.Stringer("load", cmd.ID()), zap.Error(err))
 	}
 	for _, event := range table.HandleCommand(ctx, cmd) {
 		b.events <- event
 	}
 }
 
+// handleOneEvent - сохраняет событие, а после этого рассылает его всем потребителям событий.
 func (b *bus) handleOneEvent(ctx context.Context, event domain.Event) {
-	ctx, cancel := context.WithTimeout(context.Background(), b.handlersTimeout)
+	zap.L().Info("Event", zap.Stringer("table", event.ID()))
+	ctx, cancel := context.WithTimeout(b.loopCtx, b.handlersTimeouts)
 	defer cancel()
 
 	err := b.repo.Save(ctx, event)
 	if err != nil {
-		zap.L().Panic(b.Name(), zap.Stringer("save", event.ID()), zap.Error(err))
+		zap.L().Panic("Event", zap.Stringer("save", event.ID()), zap.Error(err))
 	}
 	for _, consumer := range b.consumers {
 		consumer <- event
 	}
 }
 
-func (b *bus) Register(step interface{}) {
-	if b.commands == nil {
-		b.commands = make(chan domain.Command)
-		ctx, loopCancel := context.WithCancel(context.Background())
-		b.loopCtx = ctx
-		b.loopCancel = loopCancel
-		b.loopStopped = make(chan interface{})
-	}
-
+// register регистрирует шаги бизнес-логики — источники команд, правила обработки доменных событий и потребителей
+// событий.
+func (b *bus) register(step interface{}) {
 	if consumer, ok := step.(domain.EventConsumer); ok {
 		newChan := make(chan domain.Event)
 		b.consumers = append(b.consumers, newChan)
