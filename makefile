@@ -2,6 +2,8 @@ VENV_NAME=.venv
 PYTHON=${VENV_NAME}/bin/python3
 
 new:
+	brew install go
+	brew install golangci-lint
 	brew install python
 	brew install mongodb-community
 	brew install mongodb-database-tools
@@ -13,6 +15,8 @@ venv:
 	make update
 
 update:
+	brew upgrade go
+	brew upgrade golangci-lint
 	brew upgrade python
 	brew upgrade mongodb-community
 	brew upgrade mongodb-database-tools
