@@ -15,13 +15,15 @@ venv:
 	make update
 
 update:
-	brew upgrade go
-	brew upgrade golangci-lint
 	brew upgrade python
 	brew upgrade mongodb-community
 	brew upgrade mongodb-database-tools
 	${PYTHON} -m pip install -U pip
 	${PYTHON} -m pip install -U -r requirements.txt
+
+update_go:
+	brew upgrade go
+	brew upgrade golangci-lint
 
 db_recover:
 	@echo "Recover MongoDB"
