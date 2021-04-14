@@ -10,14 +10,14 @@ import (
 	"poptimizer/data/adapters"
 )
 
-// server реализует интерфейс модуля приложения поверх http.Server.
-type server struct {
+// Server реализует интерфейс модуля приложения поверх http.Server.
+type Server struct {
 	http.Server
 }
 
-// NewServer создает http.Server с интерфейсом модуля приложения.
-func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.JSONViewer) *server {
-	srv := server{
+// NewServer тонкая обертка http.Server с интерфейсом модуля приложения.
+func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.JSONViewer) *Server {
+	srv := Server{
 		Server: http.Server{
 			Addr:         addr,
 			ReadTimeout:  requestTimeouts,
@@ -30,12 +30,12 @@ func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.J
 }
 
 // Name - модуль Server.
-func (s *server) Name() string {
+func (s *Server) Name() string {
 	return "Server"
 }
 
 // Start - запускает сервер в отдельной горутине.
-func (s *server) Start(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			zap.L().Panic(s.Name(), zap.Error(err))

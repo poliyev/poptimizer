@@ -30,7 +30,7 @@ func (t tableHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		zap.L().Warn("JSONViewer", zap.Error(err))
 
 		return
