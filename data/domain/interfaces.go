@@ -7,8 +7,10 @@ import (
 
 // Типы для идентификаторов таблиц.
 type (
+	// Group - группа таблиц. Иногда группа может состоять из одной таблицы.
 	Group string
-	Name  string
+	// Name - название таблицы в рамках группы. Если группа состоит из одной таблицы, то имя должно совпадать названием группы.
+	Name string
 )
 
 // TableID используется для идентификации таблиц, команд и событий, связанных с ними.
@@ -17,10 +19,12 @@ type TableID struct {
 	Name  Name
 }
 
-func NewTableID(group string, name string) TableID {
+// NewTableID создает идентификатор таблицы.
+func NewTableID(group, name string) TableID {
 	return TableID{Group(group), Name(name)}
 }
 
+// ID возвращает себя, таким образом является базовой реализацией Identifiable.
 func (i TableID) ID() TableID {
 	return i
 }

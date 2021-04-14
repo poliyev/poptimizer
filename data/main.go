@@ -1,12 +1,13 @@
 package main
 
 import (
-	"poptimizer/data/config"
 	"time"
+
+	"poptimizer/data/config"
 )
 
 func main() {
-	cfg := config.Config{
+	cfg := &config.Config{
 		StartTimeout:     time.Minute,
 		ShutdownTimeout:  time.Minute,
 		ServerAddr:       "localhost:3000",

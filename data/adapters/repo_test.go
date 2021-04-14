@@ -2,12 +2,13 @@ package adapters
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/WLM1ke/gomoex"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
 	"poptimizer/data/domain"
-	"testing"
-	"time"
 )
 
 func prepareRepo(t *testing.T) *repo {
@@ -30,8 +31,10 @@ func cleanRepo(t *testing.T, repo *repo) {
 	}
 }
 
-var testID = domain.NewTableID("trading_dates", "trading_dates")
-var testRow = gomoex.Date{From: time.Time{}, Till: time.Time{}.AddDate(1, 0, 0)}
+var (
+	testID  = domain.NewTableID("trading_dates", "trading_dates")
+	testRow = gomoex.Date{From: time.Time{}, Till: time.Time{}.AddDate(1, 0, 0)}
+)
 
 func TestRepoLoadAbsentTable(t *testing.T) {
 	repo := prepareRepo(t)
@@ -79,7 +82,6 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 	rows := dates.Rows
 	assert.Equal(t, 1, len(rows))
 	assert.Equal(t, testRow, rows[0])
-
 }
 
 func TestRepoSaveAppendEvent(t *testing.T) {
@@ -109,7 +111,6 @@ func TestRepoSaveAppendEvent(t *testing.T) {
 	rows := dates.Rows
 	assert.Equal(t, 2, len(rows))
 	assert.Equal(t, testRow, rows[0])
-
 }
 
 func TestRepoJsonNoDoc(t *testing.T) {

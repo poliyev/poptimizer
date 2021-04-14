@@ -2,9 +2,10 @@ package domain
 
 import (
 	"context"
+	"time"
+
 	"github.com/WLM1ke/gomoex"
 	"go.uber.org/zap"
-	"time"
 )
 
 // GroupTradingDates - группа таблицы с торговыми данными.
@@ -19,7 +20,7 @@ func prepareZone(zone string) *time.Location {
 	return loc
 }
 
-//Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
+// Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
 var issZone = prepareZone("Europe/Moscow")
 
 const (
@@ -38,10 +39,6 @@ func nextISSDailyUpdate(now time.Time) time.Time {
 	return end
 }
 
-// Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
-// то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
-var issUpdateTimer = time.Tick(time.Hour)
-
 // CheckTradingDay формирует команды о необходимости проверки окончания торгового дня.
 //
 // Требуется при запуске приложения и ежедневно после публикации данных на MOEX ISS.
@@ -49,19 +46,24 @@ type CheckTradingDay struct {
 	timer <-chan time.Time
 }
 
+// NewCheckTradingDay создает источник сообщений о начале торгового дня.
+//
+// Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
+// то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
+func NewCheckTradingDay() *CheckTradingDay {
+	return &CheckTradingDay{time.Tick(time.Hour)}
+}
+
+// StartProduceCommands записывает команду о необходимости проверки обновления таблицы с торговыми датами на регулярной основе.
 func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
 	timer := d.timer
-	if timer == nil {
-		timer = issUpdateTimer
-	}
 
 	cmd := UpdateTable{TableID{GroupTradingDates, GroupTradingDates}}
+	output <- &cmd
 
 	now := time.Now()
-	output <- &cmd
 	nextDataUpdate := nextISSDailyUpdate(now)
 
-LOOP:
 	for {
 		select {
 		case now = <-timer:
@@ -70,7 +72,7 @@ LOOP:
 				nextDataUpdate = nextISSDailyUpdate(now)
 			}
 		case <-ctx.Done():
-			break LOOP
+			return
 		}
 	}
 }

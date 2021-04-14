@@ -3,12 +3,12 @@ package adapters
 import (
 	"context"
 	"errors"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type logger struct {
-}
+type logger struct{}
 
 func NewLogger() *logger {
 	return &logger{}

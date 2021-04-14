@@ -2,11 +2,12 @@ package app
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
-	"sync"
-	"time"
 )
 
 type bus struct {
@@ -43,7 +44,7 @@ func NewBus(repo adapters.TableRepo, EventBusTimeouts time.Duration) *bus {
 	}
 	steps := []interface{}{
 		// Источники команд
-		&domain.CheckTradingDay{},
+		domain.NewCheckTradingDay(),
 		// Правила
 
 		// Потребители сообщений
@@ -100,6 +101,7 @@ func (b *bus) loop(ctx context.Context) {
 			b.wg.Done()
 			b.wg.Wait()
 			close(b.loopStopped)
+
 			return
 		}
 	}
@@ -108,13 +110,16 @@ func (b *bus) loop(ctx context.Context) {
 // handleOneCommand - загружает таблицу, вызывает обработчик команды и направляет возникшие события в очередь.
 func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 	zap.L().Info("Command", zap.Stringer("table", cmd.ID()))
+
 	ctx, cancel := context.WithTimeout(ctx, b.handlersTimeouts)
+
 	defer cancel()
 
 	table, err := b.repo.Load(ctx, cmd.ID())
 	if err != nil {
 		zap.L().Panic("Command", zap.Stringer("load", cmd.ID()), zap.Error(err))
 	}
+
 	for _, event := range table.HandleCommand(ctx, cmd) {
 		b.events <- event
 	}
@@ -123,13 +128,16 @@ func (b *bus) handleOneCommand(ctx context.Context, cmd domain.Command) {
 // handleOneEvent - сохраняет событие, а после этого рассылает его всем потребителям событий.
 func (b *bus) handleOneEvent(ctx context.Context, event domain.Event) {
 	zap.L().Info("Event", zap.Stringer("table", event.ID()))
+
 	ctx, cancel := context.WithTimeout(ctx, b.handlersTimeouts)
+
 	defer cancel()
 
 	err := b.repo.Save(ctx, event)
 	if err != nil {
 		zap.L().Panic("Event", zap.Stringer("save", event.ID()), zap.Error(err))
 	}
+
 	for _, consumer := range b.consumers {
 		consumer <- event
 	}
@@ -148,6 +156,7 @@ func (b *bus) register(step interface{}) {
 			consumer.StartHandleEvent(b.loopCtx, newChan)
 		}()
 	}
+
 	if source, ok := step.(domain.CommandSource); ok {
 		b.wg.Add(1)
 		go func() {
@@ -155,5 +164,4 @@ func (b *bus) register(step interface{}) {
 			source.StartProduceCommands(b.loopCtx, b.commands)
 		}()
 	}
-
 }

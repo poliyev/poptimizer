@@ -1,10 +1,11 @@
 package ports
 
 import (
-	"github.com/go-chi/chi/v5/middleware"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 func zapLoggingMiddleware(next http.Handler) http.Handler {
@@ -23,7 +24,7 @@ func zapLoggingMiddleware(next http.Handler) http.Handler {
 		}()
 
 		next.ServeHTTP(ww, r)
-
 	}
+
 	return http.HandlerFunc(fn)
 }

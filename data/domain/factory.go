@@ -17,6 +17,7 @@ func (t *mainFactory) NewTable(id TableID) Table {
 		return &TradingDates{TableID: id, iss: t.iss}
 	default:
 		zap.L().Panic("Некорректное ID таблицы", zap.Stringer("id", id))
+
 		return nil
 	}
 }

@@ -1,8 +1,9 @@
 package adapters
 
 import (
-	"github.com/WLM1ke/gomoex"
 	"net/http"
+
+	"github.com/WLM1ke/gomoex"
 )
 
 // NewISSClient - создает клиент для ISS с ограничением на количество соединений.

@@ -2,15 +2,16 @@ package config
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
+
+	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/app"
 	"poptimizer/data/domain"
 	"poptimizer/data/ports"
-	"syscall"
-	"time"
 )
 
 // App - обеспечивает запуск и остановку приложения.
@@ -25,7 +26,7 @@ type App struct {
 }
 
 // NewApp - создает приложение на основе конфигурации.
-func NewApp(cfg Config) *App {
+func NewApp(cfg *Config) *App {
 	iss := adapters.NewISSClient(cfg.ISSMaxCons)
 	factory := domain.NewMainFactory(iss)
 	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
@@ -63,6 +64,7 @@ func (a *App) startModules() {
 		if err := module.Start(startCtx); err != nil {
 			zap.L().Panic(module.Name(), zap.String("status", err.Error()))
 		}
+
 		zap.L().Info(module.Name(), zap.String("status", "started"))
 	}
 
@@ -96,7 +98,6 @@ func (a *App) shutdownModules() {
 		} else {
 			zap.L().Info(module.Name(), zap.String("status", "stopped"))
 		}
-
 	}
 
 	zap.L().Info("App", zap.String("status", "stopped"))

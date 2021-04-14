@@ -2,12 +2,12 @@ package domain
 
 import (
 	"context"
-	"github.com/WLM1ke/gomoex"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/WLM1ke/gomoex"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,6 +75,7 @@ func TestTradingDayNextUpdate(t *testing.T) {
 	// После публикации данных на ISS должна отправляться команда
 	now := time.Now()
 	timer <- nextISSDailyUpdate(now).Add(time.Second)
+
 	assert.Equal(t, &out, <-output)
 
 	// До начала следующего дня обновление таймера не порождает команд

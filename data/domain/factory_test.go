@@ -1,10 +1,11 @@
 package domain
 
 import (
-	"github.com/WLM1ke/gomoex"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/WLM1ke/gomoex"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMainFactory(t *testing.T) {
@@ -16,6 +17,7 @@ func TestNewMainFactory(t *testing.T) {
 
 func TestNewMainPanicOnWrongGroup(t *testing.T) {
 	factory := NewMainFactory(gomoex.NewISSClient(http.DefaultClient))
+
 	assert.Panics(t, func() {
 		factory.NewTable(TableID{"Bad", "Bad"})
 	})
@@ -23,6 +25,7 @@ func TestNewMainPanicOnWrongGroup(t *testing.T) {
 
 func TestNewMainPanicOnWrongSingleton(t *testing.T) {
 	factory := NewMainFactory(gomoex.NewISSClient(http.DefaultClient))
+
 	assert.Panics(t, func() {
 		factory.NewTable(TableID{GroupTradingDates, "Bad"})
 	})

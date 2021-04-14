@@ -2,10 +2,12 @@ package ports
 
 import (
 	"context"
-	"go.uber.org/zap"
+	"errors"
 	"net/http"
-	"poptimizer/data/adapters"
 	"time"
+
+	"go.uber.org/zap"
+	"poptimizer/data/adapters"
 )
 
 // server реализует интерфейс модуля приложения поверх http.Server.
@@ -23,6 +25,7 @@ func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.J
 		},
 	}
 	srv.Handler = newTableMux(requestTimeouts, jsonViewer)
+
 	return &srv
 }
 
@@ -34,7 +37,7 @@ func (s *server) Name() string {
 // Start - запускает сервер в отдельной горутине.
 func (s *server) Start(ctx context.Context) error {
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			zap.L().Panic(s.Name(), zap.Error(err))
 		}
 	}()
