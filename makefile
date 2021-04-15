@@ -39,3 +39,6 @@ test:
 lint:
 	mypy poptimizer
 	flake8 poptimizer
+
+lint_go:
+	cd data;golangci-lint run
