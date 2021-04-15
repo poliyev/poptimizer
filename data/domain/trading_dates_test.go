@@ -11,9 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var testMoscowTZ = prepareZone("Europe/Moscow")
+
 func TestZone(t *testing.T) {
 	moscow, _ := time.LoadLocation("Europe/Moscow")
-	assert.Equal(t, prepareZone("Europe/Moscow"), moscow)
+	assert.Equal(t, testMoscowTZ, moscow)
 }
 
 func TestZonePanic(t *testing.T) {
@@ -22,16 +24,16 @@ func TestZonePanic(t *testing.T) {
 
 func TestBeforeNextISSDailyUpdate(t *testing.T) {
 	in := time.Date(2021, 4, 3, 21, 44, 0, 0, time.UTC)
-	out := time.Date(2021, 4, 4, 0, 45, 0, 0, issZone)
+	out := time.Date(2021, 4, 4, 0, 45, 0, 0, testMoscowTZ)
 
-	assert.Equal(t, out, nextISSDailyUpdate(in))
+	assert.Equal(t, out, nextISSDailyUpdate(in, testMoscowTZ))
 }
 
 func TestAfterNextISSDailyUpdate(t *testing.T) {
 	in := time.Date(2021, 4, 3, 21, 46, 0, 0, time.UTC)
-	out := time.Date(2021, 4, 5, 0, 45, 0, 0, issZone)
+	out := time.Date(2021, 4, 5, 0, 45, 0, 0, testMoscowTZ)
 
-	assert.Equal(t, out, nextISSDailyUpdate(in))
+	assert.Equal(t, out, nextISSDailyUpdate(in, prepareZone("Europe/Moscow")))
 }
 
 func TestTradingDayAppStart(t *testing.T) {
@@ -45,9 +47,10 @@ func TestTradingDayAppStart(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		CheckTradingDay{}.StartProduceCommands(ctx, output)
-	}()
 
+		producer := CheckTradingDay{}
+		producer.StartProduceCommands(ctx, output)
+	}()
 	assert.Equal(t, &out, <-output)
 
 	cancel()
@@ -67,20 +70,22 @@ func TestTradingDayNextUpdate(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		CheckTradingDay{timer}.StartProduceCommands(ctx, output)
+
+		producer := CheckTradingDay{}
+		producer.StartProduceCommands(ctx, output)
 	}()
 
 	<-output
 
 	// После публикации данных на ISS должна отправляться команда
 	now := time.Now()
-	timer <- nextISSDailyUpdate(now).Add(time.Second)
+	timer <- nextISSDailyUpdate(now, testMoscowTZ).Add(time.Second)
 
 	assert.Equal(t, &out, <-output)
 
 	// До начала следующего дня обновление таймера не порождает команд
 	close(output)
-	timer <- nextISSDailyUpdate(now).Add(time.Hour * 24)
+	timer <- nextISSDailyUpdate(now, testMoscowTZ).Add(time.Hour * 24)
 
 	cancel()
 	wg.Wait()

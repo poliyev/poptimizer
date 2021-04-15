@@ -11,26 +11,25 @@ import (
 // GroupTradingDates - группа таблицы с торговыми данными.
 const GroupTradingDates = "trading_dates"
 
-func prepareZone(zone string) *time.Location {
-	loc, err := time.LoadLocation(zone)
+// Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
+const (
+	issTZ     = "Europe/Moscow"
+	issHour   = 0
+	issMinute = 45
+)
+
+func prepareZone(tz string) *time.Location {
+	loc, err := time.LoadLocation(tz)
 	if err != nil {
-		zap.L().Panic("Не удалось загрузить часовой пояс Москвы", zap.Error(err))
+		zap.L().Panic("Не удалось загрузить часовой пояс", zap.Error(err))
 	}
 
 	return loc
 }
 
-// Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
-var issZone = prepareZone("Europe/Moscow")
-
-const (
-	issHour   = 0
-	issMinute = 45
-)
-
-func nextISSDailyUpdate(now time.Time) time.Time {
-	now = now.In(issZone)
-	end := time.Date(now.Year(), now.Month(), now.Day(), issHour, issMinute, 0, 0, issZone)
+func nextISSDailyUpdate(now time.Time, tz *time.Location) time.Time {
+	now = now.In(tz)
+	end := time.Date(now.Year(), now.Month(), now.Day(), issHour, issMinute, 0, 0, tz)
 
 	if end.Before(now) {
 		end = end.AddDate(0, 0, 1)
@@ -43,7 +42,8 @@ func nextISSDailyUpdate(now time.Time) time.Time {
 //
 // Требуется при запуске приложения и ежедневно после публикации данных на MOEX ISS.
 type CheckTradingDay struct {
-	timer <-chan time.Time
+	ticker *time.Ticker
+	tz     *time.Location
 }
 
 // NewCheckTradingDay создает источник сообщений о начале торгового дня.
@@ -51,27 +51,33 @@ type CheckTradingDay struct {
 // Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
 // то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
 func NewCheckTradingDay() *CheckTradingDay {
-	return &CheckTradingDay{time.Tick(time.Hour)}
+	return &CheckTradingDay{
+		ticker: time.NewTicker(time.Hour),
+		tz:     prepareZone(issTZ),
+	}
 }
 
 // StartProduceCommands записывает команду о необходимости проверки обновления таблицы с торговыми датами на регулярной основе.
-func (d CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
-	timer := d.timer
+func (d *CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
+	ticker := d.ticker
 
 	cmd := UpdateTable{TableID{GroupTradingDates, GroupTradingDates}}
 	output <- &cmd
 
 	now := time.Now()
-	nextDataUpdate := nextISSDailyUpdate(now)
+	nextDataUpdate := nextISSDailyUpdate(now, d.tz)
 
 	for {
 		select {
-		case now = <-timer:
+		case now = <-ticker.C:
 			if now.After(nextDataUpdate) {
 				output <- &cmd
-				nextDataUpdate = nextISSDailyUpdate(now)
+
+				nextDataUpdate = nextISSDailyUpdate(now, d.tz)
 			}
 		case <-ctx.Done():
+			ticker.Stop()
+
 			return
 		}
 	}

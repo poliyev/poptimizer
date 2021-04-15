@@ -3,24 +3,28 @@ package adapters
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type logger struct{}
+// Logger модуль логирования на основе глобального логера zap.
+type Logger struct{}
 
-func NewLogger() *logger {
-	return &logger{}
+// NewLogger создает новый модуль логирования.
+func NewLogger() *Logger {
+	return &Logger{}
 }
 
-func (l logger) Name() string {
-	return "logger"
+// Name - название модуля.
+func (l Logger) Name() string {
+	return "Logger"
 }
 
-func (l logger) Start(ctx context.Context) error {
-	config := zap.NewDevelopmentConfig()
-	config.EncoderConfig = zapcore.EncoderConfig{
+// Start устанавливает настройки глобального логера zap.
+func (l Logger) Start(ctx context.Context) error {
+	encoderConfig := zapcore.EncoderConfig{
 		MessageKey:    "M",
 		LevelKey:      "L",
 		TimeKey:       "T",
@@ -37,9 +41,18 @@ func (l logger) Start(ctx context.Context) error {
 		EncodeName:       zapcore.FullNameEncoder,
 		ConsoleSeparator: " ",
 	}
+	config := zap.Config{
+		Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
+		Development:      false,
+		Encoding:         "console",
+		EncoderConfig:    encoderConfig,
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
+	}
+
 	logger, err := config.Build()
 	if err != nil {
-		return err
+		return fmt.Errorf("logger start failed: %w", err)
 	}
 
 	zap.ReplaceGlobals(logger)
@@ -47,10 +60,14 @@ func (l logger) Start(ctx context.Context) error {
 	return nil
 }
 
-func (l logger) Shutdown(ctx context.Context) error {
+var errStderrSync = errors.New("sync /dev/stderr: inappropriate ioctl for device")
+
+// Shutdown синхронизирует записи в лог.
+func (l Logger) Shutdown(ctx context.Context) error {
 	err := zap.L().Sync()
-	if err != nil && errors.Is(err, errors.New("sync /dev/stderr: inappropriate ioctl for device")) {
-		return err
+	if err != nil && errors.Is(err, errStderrSync) {
+		return fmt.Errorf("logger shutdown error: %w", err)
 	}
+
 	return nil
 }

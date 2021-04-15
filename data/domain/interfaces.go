@@ -30,7 +30,7 @@ func (i TableID) ID() TableID {
 }
 
 func (i TableID) String() string {
-	return fmt.Sprintf("ID(%s, %s", i.Group, i.Name)
+	return fmt.Sprintf("ID(%s, %s)", i.Group, i.Name)
 }
 
 // Identifiable - талицы и связанные с ними объекты.

@@ -4,14 +4,14 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"syscall"
-	"time"
-
-	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/app"
 	"poptimizer/data/domain"
 	"poptimizer/data/ports"
+	"syscall"
+	"time"
+
+	"go.uber.org/zap"
 )
 
 // App - обеспечивает запуск и остановку приложения.

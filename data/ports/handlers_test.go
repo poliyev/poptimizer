@@ -3,14 +3,15 @@ package ports
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/mongo"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"poptimizer/data/domain"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
@@ -26,6 +27,7 @@ type TestJSONViewer struct {
 
 func (t *TestJSONViewer) ViewJSON(ctx context.Context, id domain.TableID) ([]byte, error) {
 	t.id = id
+
 	return t.data, t.err
 }
 
@@ -54,10 +56,12 @@ func TestNoDoc(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
+var errTest = errors.New("some")
+
 func TestServerErr(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	viewer := TestJSONViewer{data: nil, err: errors.New("some")}
+	viewer := TestJSONViewer{data: nil, err: errTest}
 	mux := newTableMux(time.Second, &viewer)
 	mux.ServeHTTP(w, testReq)
 

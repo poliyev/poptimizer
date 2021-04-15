@@ -2,7 +2,6 @@ package adapters
 
 import (
 	"context"
-
 	"poptimizer/data/domain"
 )
 

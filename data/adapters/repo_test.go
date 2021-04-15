@@ -2,30 +2,37 @@ package adapters
 
 import (
 	"context"
+	"poptimizer/data/domain"
 	"testing"
 	"time"
 
 	"github.com/WLM1ke/gomoex"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
-	"poptimizer/data/domain"
 )
 
-func prepareRepo(t *testing.T) *repo {
+func prepareRepo(t *testing.T) *Repo {
+	t.Helper()
+
 	iss := NewISSClient(20)
 	factory := domain.NewMainFactory(iss)
+
 	repo := NewRepo("mongodb://localhost:27017", "test", factory)
 	if repo.Start(context.Background()) != nil {
 		t.Error("Не удалось запустить тестовую репозиторий.")
 	}
+
 	return repo
 }
 
-func cleanRepo(t *testing.T, repo *repo) {
+func cleanRepo(t *testing.T, repo *Repo) {
+	t.Helper()
+
 	ctx := context.Background()
 	if repo.db.Drop(ctx) != nil {
 		t.Error("Не удалось удалить тестовую базу.")
 	}
+
 	if repo.Shutdown(ctx) != nil {
 		t.Error("Не удалось завершить работу репозитория.")
 	}
@@ -43,14 +50,17 @@ func TestRepoLoadAbsentTable(t *testing.T) {
 	table, err := repo.Load(context.Background(), testID)
 	if err != nil {
 		t.Error("Не удалось загрузить таблицу")
+
 		return
 	}
 
 	dates, ok := table.(*domain.TradingDates)
 	if !ok {
 		t.Error("Некорректная таблица")
+
 		return
 	}
+
 	assert.Nil(t, dates.Rows)
 }
 
@@ -63,6 +73,7 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
 	}
+
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
 	}
@@ -70,12 +81,14 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 	table, err := repo.Load(context.Background(), testID)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")
+
 		return
 	}
 
 	dates, ok := table.(*domain.TradingDates)
 	if !ok {
 		t.Error("Некорректная таблица")
+
 		return
 	}
 
@@ -93,18 +106,22 @@ func TestRepoSaveAppendEvent(t *testing.T) {
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
 	}
+
 	if repo.Save(context.Background(), event) != nil {
 		t.Error("Не удалось сохранить таблицу")
 	}
+
 	table, err := repo.Load(context.Background(), testID)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")
+
 		return
 	}
 
 	dates, ok := table.(*domain.TradingDates)
 	if !ok {
 		t.Error("Некорректная таблица")
+
 		return
 	}
 

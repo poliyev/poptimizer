@@ -1,19 +1,19 @@
 package main
 
 import (
-	"time"
-
 	"poptimizer/data/config"
+	"time"
 )
 
 func main() {
+	issMaxCons := 20
 	cfg := &config.Config{
 		StartTimeout:     time.Minute,
 		ShutdownTimeout:  time.Minute,
 		ServerAddr:       "localhost:3000",
 		ServerTimeouts:   time.Millisecond,
 		EventBusTimeouts: time.Minute,
-		ISSMaxCons:       20,
+		ISSMaxCons:       issMaxCons,
 		MongoURI:         "mongodb://localhost:27017",
 		MongoDB:          "new_data",
 	}

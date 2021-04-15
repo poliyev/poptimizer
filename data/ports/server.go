@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"poptimizer/data/adapters"
 	"time"
 
 	"go.uber.org/zap"
-	"poptimizer/data/adapters"
 )
 
 // Server реализует интерфейс модуля приложения поверх http.Server.

@@ -13,5 +13,6 @@ func NewISSClient(maxCons int) *gomoex.ISSClient {
 			MaxConnsPerHost: maxCons,
 		},
 	}
+
 	return gomoex.NewISSClient(client)
 }

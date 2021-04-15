@@ -3,14 +3,14 @@ package ports
 import (
 	"errors"
 	"net/http"
+	"poptimizer/data/adapters"
+	"poptimizer/data/domain"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
-	"poptimizer/data/adapters"
-	"poptimizer/data/domain"
 )
 
 type tableHandler struct {
