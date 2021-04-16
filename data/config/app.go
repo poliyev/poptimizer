@@ -22,6 +22,7 @@ import (
 type App struct {
 	startTimeout    time.Duration
 	shutdownTimeout time.Duration
+	stop            chan os.Signal
 	modules         []Module
 }
 
@@ -42,6 +43,7 @@ func NewApp(cfg *Config) *App {
 	return &App{
 		startTimeout:    cfg.StartTimeout,
 		shutdownTimeout: cfg.ShutdownTimeout,
+		stop:            make(chan os.Signal, 1),
 		modules:         modules,
 	}
 }
@@ -50,9 +52,7 @@ func NewApp(cfg *Config) *App {
 // завершение работы модулей после их поступления.
 func (a *App) Run() {
 	a.startModules()
-
-	<-a.terminate()
-
+	a.terminated()
 	a.shutdownModules()
 }
 
@@ -71,18 +71,10 @@ func (a *App) startModules() {
 	zap.L().Info("App", zap.String("status", "started"))
 }
 
-func (a *App) terminate() <-chan struct{} {
-	ctx, cancel := context.WithCancel(context.Background())
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-stop
-		zap.L().Info("App", zap.String("status", "stopping"))
-		cancel()
-	}()
-
-	return ctx.Done()
+func (a *App) terminated() {
+	signal.Notify(a.stop, syscall.SIGINT, syscall.SIGTERM)
+	<-a.stop
+	zap.L().Info("App", zap.String("status", "stopping"))
 }
 
 func (a *App) shutdownModules() {
