@@ -42,7 +42,8 @@ func nextISSDailyUpdate(now time.Time, tz *time.Location) time.Time {
 //
 // Требуется при запуске приложения и ежедневно после публикации данных на MOEX ISS.
 type CheckTradingDay struct {
-	ticker *time.Ticker
+	ticker <-chan time.Time
+	stopFn func()
 	tz     *time.Location
 }
 
@@ -51,16 +52,17 @@ type CheckTradingDay struct {
 // Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
 // то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
 func NewCheckTradingDay() *CheckTradingDay {
+	ticker := time.NewTicker(time.Hour)
+
 	return &CheckTradingDay{
-		ticker: time.NewTicker(time.Hour),
+		ticker: ticker.C,
+		stopFn: ticker.Stop,
 		tz:     prepareZone(issTZ),
 	}
 }
 
 // StartProduceCommands записывает команду о необходимости проверки обновления таблицы с торговыми датами на регулярной основе.
 func (d *CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<- Command) {
-	ticker := d.ticker
-
 	cmd := UpdateTable{TableID{GroupTradingDates, GroupTradingDates}}
 	output <- &cmd
 
@@ -69,14 +71,14 @@ func (d *CheckTradingDay) StartProduceCommands(ctx context.Context, output chan<
 
 	for {
 		select {
-		case now = <-ticker.C:
+		case now = <-d.ticker:
 			if now.After(nextDataUpdate) {
 				output <- &cmd
 
 				nextDataUpdate = nextISSDailyUpdate(now, d.tz)
 			}
 		case <-ctx.Done():
-			ticker.Stop()
+			d.stopFn()
 
 			return
 		}

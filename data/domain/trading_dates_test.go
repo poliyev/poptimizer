@@ -48,7 +48,7 @@ func TestTradingDayAppStart(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		producer := CheckTradingDay{}
+		producer := NewCheckTradingDay()
 		producer.StartProduceCommands(ctx, output)
 	}()
 	assert.Equal(t, &out, <-output)
@@ -71,7 +71,7 @@ func TestTradingDayNextUpdate(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		producer := CheckTradingDay{}
+		producer := CheckTradingDay{ticker: timer, stopFn: func() {}, tz: testMoscowTZ}
 		producer.StartProduceCommands(ctx, output)
 	}()
 

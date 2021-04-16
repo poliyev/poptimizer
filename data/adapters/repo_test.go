@@ -137,7 +137,7 @@ func TestRepoJsonNoDoc(t *testing.T) {
 	json, err := repo.ViewJSON(context.Background(), testID)
 
 	assert.Nil(t, json)
-	assert.Equal(t, mongo.ErrNoDocuments, err)
+	assert.ErrorIs(t, err, mongo.ErrNoDocuments)
 }
 
 func TestRepoJsonWithDoc(t *testing.T) {
