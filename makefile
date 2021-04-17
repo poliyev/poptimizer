@@ -36,6 +36,9 @@ db_stop:
 test:
 	pytest poptimizer -v --cov=poptimizer --cov-report=term-missing --cov-report=xml --setup-show
 
+test_go:
+	cd data;go test ./... -covermode=atomic -race
+
 lint:
 	mypy poptimizer
 	flake8 poptimizer
