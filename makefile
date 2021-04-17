@@ -24,6 +24,7 @@ update:
 update_go:
 	brew upgrade go
 	brew upgrade golangci-lint
+	cd data;go get -u -t -v ./...;go mod tidy
 
 db_recover:
 	@echo "Recover MongoDB"
