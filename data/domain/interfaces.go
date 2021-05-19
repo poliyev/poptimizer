@@ -43,7 +43,7 @@ func (i ID) String() string {
 	return fmt.Sprintf("ID(%s, %s)", i.Group(), i.Name())
 }
 
-// Event - события, произошедшие при попытке обновить таблицу.
+// Event - событие, произошедшее при попытке обновить таблицу.
 type Event interface {
 	Identifiable
 }
@@ -57,6 +57,7 @@ type Table interface {
 // Rule - бизнес правило.
 //
 // Читает события из входящего канала, обрабатывает их с заданных таймаутом и пишет новые события в исходящий канал.
+// Может отсутствовать логика чтения или записи, но при этом должно быть обеспечено отсутствии блокировки при записи во входящий канала.
 type Rule interface {
 	Activate(ctx context.Context, in <-chan Event, out chan<- Event)
 }
