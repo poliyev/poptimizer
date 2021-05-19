@@ -13,29 +13,34 @@ type (
 	Name string
 )
 
-// TableID используется для идентификации таблиц, команд и событий, связанных с ними.
-type TableID struct {
-	Group Group
-	Name  Name
-}
-
-// NewTableID создает идентификатор таблицы.
-func NewTableID(group, name string) TableID {
-	return TableID{Group(group), Name(name)}
-}
-
-// ID возвращает себя, таким образом является базовой реализацией Identifiable.
-func (i TableID) ID() TableID {
-	return i
-}
-
-func (i TableID) String() string {
-	return fmt.Sprintf("ID(%s, %s)", i.Group, i.Name)
-}
-
 // Identifiable - талицы и связанные с ними объекты.
 type Identifiable interface {
-	ID() TableID
+	fmt.Stringer
+	Group() Group
+	Name() Name
+}
+
+// ID используется для идентификации таблиц и событий, связанных с ними.
+type ID struct {
+	group Group
+	name  Name
+}
+
+// NewID создает идентификатор таблицы.
+func NewID(group, name string) ID {
+	return ID{Group(group), Name(name)}
+}
+
+func (i ID) Group() Group {
+	return i.group
+}
+
+func (i ID) Name() Name {
+	return i.name
+}
+
+func (i ID) String() string {
+	return fmt.Sprintf("ID(%s, %s)", i.Group(), i.Name())
 }
 
 // Event - события, произошедшие при попытке обновить таблицу.
@@ -43,34 +48,15 @@ type Event interface {
 	Identifiable
 }
 
-// EventConsumer - обработчик событий.
-type EventConsumer interface {
-	StartHandleEvent(ctx context.Context, source <-chan Event)
-}
-
-// Command - команда для таблицы.
-type Command interface {
-	Identifiable
-}
-
-// CommandSource - генератор команд для таблиц.
-type CommandSource interface {
-	StartProduceCommands(ctx context.Context, output chan<- Command)
-}
-
-// Rule - описывает бизнес правило, принимает произошедшие события и при необходимости генерирует необходимые команды для таблиц.
-type Rule interface {
-	EventConsumer
-	CommandSource
-}
-
-// Table - таблица, которая умеет обрабатывать команды и возвращать произошедшие в процессе их исполнения события.
+// Table - таблица, которая умеет обновляться.
 type Table interface {
 	Identifiable
-	HandleCommand(ctx context.Context, cmd Command) []Event
+	Update(ctx context.Context) []Event
 }
 
-// Factory - фабрика для создания таблиц.
-type Factory interface {
-	NewTable(id TableID) Table
+// Rule - бизнес правило.
+//
+// Читает события из входящего канала, обрабатывает их с заданных таймаутом и пишет новые события в исходящий канал.
+type Rule interface {
+	Activate(ctx context.Context, in <-chan Event, out chan<- Event)
 }
