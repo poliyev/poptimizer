@@ -13,26 +13,19 @@ import (
 
 // Repo обеспечивает хранение и загрузку таблиц.
 type Repo struct {
-	factory domain.Factory
-	uri     string
-	dbName  string
-	db      *mongo.Database
+	uri    string
+	dbName string
+	db     *mongo.Database
 }
 
 // NewRepo - создает новое Repo.
-func NewRepo(mongoURI, mongoDB string, factory domain.Factory) *Repo {
+func NewRepo(mongoURI, mongoDB string) *Repo {
 	repo := Repo{
-		uri:     mongoURI,
-		dbName:  mongoDB,
-		factory: factory,
+		uri:    mongoURI,
+		dbName: mongoDB,
 	}
 
 	return &repo
-}
-
-// Name - наименование в рамках интерфейса модуля.
-func (r *Repo) Name() string {
-	return "Repo"
 }
 
 // Start запускает модуль репозитория.
@@ -56,54 +49,56 @@ func (r *Repo) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// Load загружает сохраненную или возвращает пустую новую таблицу.
-func (r *Repo) Load(ctx context.Context, id domain.TableID) (domain.Table, error) {
-	template := r.factory.NewTable(id)
-	collection := r.db.Collection(string(id.Group))
-
-	err := collection.FindOne(ctx, bson.M{"_id": id.Name}).Decode(template)
+// Unmarshal заполняет шаблон таблицы из события.
+func (r *Repo) Unmarshal(ctx context.Context, event domain.UpdateRequired) (domain.Table, error) {
+	collection := r.db.Collection(string(event.Group()))
+	err := collection.FindOne(ctx, bson.M{"_id": event.Name()}).Decode(event.Template)
 
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
-		return template, nil
+		return event.Template, nil
 	case err == nil:
-		return template, nil
+		return event.Template, nil
 	default:
-		return nil, fmt.Errorf("repo load error %s: %w", id, err)
+		return nil, fmt.Errorf("repo load error %s: %w", event, err)
 	}
 }
 
-// Save сохраняет результаты изменения таблицы.
-func (r *Repo) Save(ctx context.Context, event domain.Event) error {
-	id := event.ID()
-	collection := r.db.Collection(string(id.Group))
+// Replace замещает сохраненные строки таблицы на новые из события.
+func (r *Repo) Replace(ctx context.Context, event domain.RowsReplaced) error {
+	collection := r.db.Collection(string(event.Group()))
 
-	filter := bson.M{"_id": id.Name}
-
-	var update bson.M
-
-	switch changes := event.(type) {
-	case domain.RowsReplaced:
-		update = bson.M{"$set": bson.M{"rows": changes.Rows}}
-	case domain.RowsAppended:
-		update = bson.M{"$push": bson.M{"rows": bson.M{"$each": changes.Rows}}}
-	}
-
+	filter := bson.M{"_id": event.Name()}
+	update := bson.M{"$set": bson.M{"rows": event.Rows}}
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
-		return fmt.Errorf("repo save error %s: %w", event.ID(), err)
+		return fmt.Errorf("repo save error %s: %w", event, err)
+	}
+
+	return nil
+}
+
+// Append дописывает в конец новые строки из события.
+func (r *Repo) Append(ctx context.Context, event domain.RowsAppended) error {
+	collection := r.db.Collection(string(event.Group()))
+
+	filter := bson.M{"_id": event.Name()}
+	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": event.Rows}}}
+	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return fmt.Errorf("repo save error %s: %w", event, err)
 	}
 
 	return nil
 }
 
 // ViewJSON загружает ExtendedJSON представление строк из таблицы.
-func (r *Repo) ViewJSON(ctx context.Context, id domain.TableID) ([]byte, error) {
-	collection := r.db.Collection(string(id.Group))
+func (r *Repo) ViewJSON(ctx context.Context, id domain.ID) ([]byte, error) {
+	collection := r.db.Collection(string(id.Group()))
 
 	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1})
 
-	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name}, projections).DecodeBytes()
+	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name()}, projections).DecodeBytes()
 	if err != nil {
 		return nil, fmt.Errorf("repo json viewer error %s: %w", id, err)
 	}
