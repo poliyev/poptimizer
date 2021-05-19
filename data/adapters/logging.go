@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -17,13 +18,8 @@ func NewLogger() *Logger {
 	return &Logger{}
 }
 
-// Name - название модуля.
-func (l Logger) Name() string {
-	return "Logger"
-}
-
 // Start устанавливает настройки глобального логера zap.
-func (l Logger) Start(ctx context.Context) error {
+func (l Logger) Start(_ context.Context) error {
 	encoderConfig := zapcore.EncoderConfig{
 		MessageKey:    "M",
 		LevelKey:      "L",
@@ -63,11 +59,17 @@ func (l Logger) Start(ctx context.Context) error {
 var errStderrSync = errors.New("sync /dev/stderr: inappropriate ioctl for device")
 
 // Shutdown синхронизирует записи в лог.
-func (l Logger) Shutdown(ctx context.Context) error {
+func (l Logger) Shutdown(_ context.Context) error {
 	err := zap.L().Sync()
 	if err != nil && errors.Is(err, errStderrSync) {
 		return fmt.Errorf("logger shutdown error: %w", err)
 	}
 
 	return nil
+}
+
+// TypeField - поле для логера с коротким типом объекта (с убранным знаком указателя и путем к нему).
+func TypeField(value interface{}) zap.Field {
+	parts := strings.Split(fmt.Sprintf("%T", value), ".")
+	return zap.String("type", parts[len(parts)-1])
 }
