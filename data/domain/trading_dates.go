@@ -90,6 +90,7 @@ func NewUpdateTradingDates(iss *gomoex.ISSClient) *UpdateTradingDates {
 }
 
 // Activate активирует правило.
+// Не использует входящие события и посылает событие с обновлением таблицы торговых дат.
 func (d *UpdateTradingDates) Activate(ctx context.Context, in <-chan Event, out chan<- Event) {
 	defer d.stopFn()
 
