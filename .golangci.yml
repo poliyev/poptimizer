@@ -28,9 +28,6 @@ linters-settings:
       - diagnostic
       - style
       - experimental
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.3
   govet:
     # report about shadowed variables
     check-shadowing: true
@@ -91,7 +88,6 @@ linters:
     - gofumpt
     - goheader
     - goimports
-    - golint
     - gomnd
     - gomoddirectives
     - gomodguard
@@ -110,10 +106,12 @@ linters:
     - nolintlint
     - prealloc
     - predeclared
+    - promlinter
     - revive
     - rowserrcheck
     - sqlclosecheck
     - stylecheck
+    - tagliatelle
     - thelper
     - tparallel
     - unconvert

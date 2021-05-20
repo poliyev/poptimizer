@@ -2,11 +2,12 @@ package app
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"poptimizer/data/domain"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestTable struct {
@@ -18,8 +19,7 @@ func (t *TestTable) Update(_ context.Context) []domain.Event {
 	return []domain.Event{t.outEvent}
 }
 
-type TestRepo struct {
-}
+type TestRepo struct{}
 
 func (t TestRepo) Unmarshal(_ context.Context, event domain.UpdateRequired) (domain.Table, error) {
 	return event.Template, nil

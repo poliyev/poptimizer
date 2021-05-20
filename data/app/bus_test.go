@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"poptimizer/data/domain"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestRule struct {

@@ -31,10 +31,12 @@ func NewID(group, name string) ID {
 	return ID{Group(group), Name(name)}
 }
 
+// Group группа таблицы или связанного с ней события.
 func (i ID) Group() Group {
 	return i.group
 }
 
+// Name названия таблицы в рамках группы или связанного с ней события.
 func (i ID) Name() Name {
 	return i.name
 }

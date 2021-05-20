@@ -70,8 +70,8 @@ func (r *Repo) Replace(ctx context.Context, event domain.RowsReplaced) error {
 
 	filter := bson.M{"_id": event.Name()}
 	update := bson.M{"$set": bson.M{"rows": event.Rows}}
-	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
-	if err != nil {
+
+	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
 		return fmt.Errorf("repo save error %s: %w", event, err)
 	}
 
@@ -84,8 +84,8 @@ func (r *Repo) Append(ctx context.Context, event domain.RowsAppended) error {
 
 	filter := bson.M{"_id": event.Name()}
 	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": event.Rows}}}
-	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
-	if err != nil {
+
+	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
 		return fmt.Errorf("repo save error %s: %w", event, err)
 	}
 

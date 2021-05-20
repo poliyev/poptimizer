@@ -2,10 +2,11 @@ package app
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"poptimizer/data/domain"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // Repo осуществляет восстановление талицы и сохранение новых строк.
@@ -45,22 +46,24 @@ func (u UoW) Activate(ctx context.Context, in <-chan domain.Event, out chan<- do
 			}
 
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 
-				ctx, cancel := context.WithTimeout(ctx, u.timeout)
+				eventCtx, cancel := context.WithTimeout(ctx, u.timeout)
 				defer cancel()
 
-				table := u.unmarshalTable(ctx, update)
+				table := u.unmarshalTable(eventCtx, update)
 
-				for _, event := range table.Update(ctx) {
-					u.saveChanges(ctx, event)
+				for _, event := range table.Update(eventCtx) {
+					u.saveChanges(eventCtx, event)
 					out <- event
 				}
 			}()
 
 		case <-ctx.Done():
 			wg.Wait()
+
 			return
 		}
 	}

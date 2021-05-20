@@ -1,10 +1,11 @@
 package adapters
 
 import (
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"poptimizer/data/domain"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestTypeField(t *testing.T) {

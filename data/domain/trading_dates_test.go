@@ -2,11 +2,12 @@ package domain
 
 import (
 	"context"
-	"github.com/WLM1ke/gomoex"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/WLM1ke/gomoex"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -84,10 +85,12 @@ func TestTradingDayAppStartOutInNotBlocks(t *testing.T) {
 	}()
 
 	var firstOut, inNotBlocks bool
+
 	for {
 		select {
 		case result := <-out:
 			assert.Equal(t, testEvent, result)
+
 			firstOut = true
 		case in <- testEvent:
 			inNotBlocks = true
@@ -96,10 +99,10 @@ func TestTradingDayAppStartOutInNotBlocks(t *testing.T) {
 		if firstOut && inNotBlocks {
 			cancel()
 			wg.Wait()
+
 			return
 		}
 	}
-
 }
 
 func TestTradingDayNextUpdate(t *testing.T) {

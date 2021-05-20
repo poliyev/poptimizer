@@ -2,10 +2,11 @@ package adapters
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
 	"poptimizer/data/domain"
 	"testing"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/WLM1ke/gomoex"
 	"github.com/stretchr/testify/assert"

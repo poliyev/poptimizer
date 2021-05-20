@@ -71,5 +71,6 @@ func (l Logger) Shutdown(_ context.Context) error {
 // TypeField - поле для логера с коротким типом объекта (с убранным знаком указателя и путем к нему).
 func TypeField(value interface{}) zap.Field {
 	parts := strings.Split(fmt.Sprintf("%T", value), ".")
+
 	return zap.String("type", parts[len(parts)-1])
 }

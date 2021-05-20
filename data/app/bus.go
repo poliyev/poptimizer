@@ -3,12 +3,13 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/WLM1ke/gomoex"
-	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
 	"sync"
 	"time"
+
+	"github.com/WLM1ke/gomoex"
+	"go.uber.org/zap"
 )
 
 // Bus - шина для обработки событий, поддерживающую интерфейс модуля приложения.
@@ -57,10 +58,10 @@ func (b *Bus) Start(_ context.Context) error {
 			rule.Activate(ctx, in, events)
 			zap.L().Info("Rule deactivated", adapters.TypeField(rule))
 		}()
-
 	}
 
 	b.wg.Add(1)
+
 	go func() {
 		defer b.wg.Done()
 
@@ -74,12 +75,13 @@ func (b *Bus) loop(ctx context.Context, events chan domain.Event, consumers []ch
 	for {
 		select {
 		case event := <-events:
-
 			b.wg.Add(1)
+
 			go func() {
 				defer b.wg.Done()
 
 				zap.L().Info("Event", adapters.TypeField(event), zap.Stringer("id", event))
+
 				for _, consumer := range consumers {
 					consumer <- event
 				}
@@ -105,6 +107,7 @@ func (b *Bus) Shutdown(ctx context.Context) error {
 
 func (b *Bus) waitCancel() chan struct{} {
 	stopped := make(chan struct{})
+
 	go func() {
 		b.wg.Wait()
 		close(stopped)
