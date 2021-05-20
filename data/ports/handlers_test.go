@@ -22,10 +22,10 @@ var (
 type TestJSONViewer struct {
 	data []byte
 	err  error
-	id   domain.TableID
+	id   domain.ID
 }
 
-func (t *TestJSONViewer) ViewJSON(ctx context.Context, id domain.TableID) ([]byte, error) {
+func (t *TestJSONViewer) ViewJSON(_ context.Context, id domain.ID) ([]byte, error) {
 	t.id = id
 
 	return t.data, t.err
@@ -40,7 +40,7 @@ func TestGoodRespond(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	assert.Equal(t, domain.NewTableID("abc", "dfg"), viewer.id)
+	assert.Equal(t, domain.NewID("abc", "dfg"), viewer.id)
 
 	body, _ := ioutil.ReadAll(w.Body)
 	assert.Equal(t, testResBody, body)

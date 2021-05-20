@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"poptimizer/data/adapters"
 	"time"
 
 	"go.uber.org/zap"
@@ -16,7 +15,7 @@ type Server struct {
 }
 
 // NewServer тонкая обертка http.Server с интерфейсом модуля приложения.
-func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.JSONViewer) *Server {
+func NewServer(addr string, requestTimeouts time.Duration, jsonViewer JSONViewer) *Server {
 	srv := Server{
 		Server: http.Server{
 			Addr:         addr,
@@ -29,16 +28,11 @@ func NewServer(addr string, requestTimeouts time.Duration, jsonViewer adapters.J
 	return &srv
 }
 
-// Name - модуль Server.
-func (s *Server) Name() string {
-	return "Server"
-}
-
 // Start - запускает сервер в отдельной горутине.
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) Start(_ context.Context) error {
 	go func() {
 		if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			zap.L().Panic(s.Name(), zap.Error(err))
+			zap.L().Panic("Server", zap.Error(err))
 		}
 	}()
 

@@ -1,9 +1,9 @@
 package ports
 
 import (
+	"context"
 	"errors"
 	"net/http"
-	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
 	"time"
 
@@ -13,13 +13,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// JSONViewer обеспечивает просмотр данных таблиц в формате ExtendedJSON.
+type JSONViewer interface {
+	ViewJSON(ctx context.Context, id domain.ID) ([]byte, error)
+}
+
 type tableHandler struct {
-	viewer adapters.JSONViewer
+	viewer JSONViewer
 }
 
 func (t tableHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := domain.NewTableID(chi.URLParam(r, "group"), chi.URLParam(r, "name"))
+	id := domain.NewID(chi.URLParam(r, "group"), chi.URLParam(r, "name"))
 	res, err := t.viewer.ViewJSON(ctx, id)
 
 	if errors.Is(err, mongo.ErrNoDocuments) {
@@ -43,7 +48,7 @@ func (t tableHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newTableMux(requestTimeouts time.Duration, viewer adapters.JSONViewer) http.Handler {
+func newTableMux(requestTimeouts time.Duration, viewer JSONViewer) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.Timeout(requestTimeouts))
 	router.Use(zapLoggingMiddleware)
