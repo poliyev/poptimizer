@@ -6,7 +6,6 @@ import (
 	"os/signal"
 	"poptimizer/data/adapters"
 	"poptimizer/data/app"
-	"poptimizer/data/domain"
 	"poptimizer/data/ports"
 	"syscall"
 	"time"
@@ -28,10 +27,9 @@ type App struct {
 
 // NewApp - создает приложение на основе конфигурации.
 func NewApp(cfg *Config) *App {
+	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB)
 	iss := adapters.NewISSClient(cfg.ISSMaxCons)
-	factory := domain.NewMainFactory(iss)
-	repo := adapters.NewRepo(cfg.MongoURI, cfg.MongoDB, factory)
-	bus := app.NewBus(repo, cfg.EventBusTimeouts)
+	bus := app.NewBus(repo, cfg.EventBusTimeouts, iss)
 
 	modules := []Module{
 		adapters.NewLogger(),
@@ -62,19 +60,19 @@ func (a *App) startModules() {
 
 	for _, module := range a.modules {
 		if err := module.Start(startCtx); err != nil {
-			zap.L().Panic(module.Name(), zap.String("status", err.Error()))
+			zap.L().Panic("Starting", adapters.TypeField(module), zap.String("status", err.Error()))
 		}
 
-		zap.L().Info(module.Name(), zap.String("status", "started"))
+		zap.L().Info("Starting", adapters.TypeField(module))
 	}
 
-	zap.L().Info("App", zap.String("status", "started"))
+	zap.L().Info("Started", adapters.TypeField(a))
 }
 
 func (a *App) terminated() {
 	signal.Notify(a.stop, syscall.SIGINT, syscall.SIGTERM)
 	<-a.stop
-	zap.L().Info("App", zap.String("status", "stopping"))
+	zap.L().Info("Stopping", adapters.TypeField(a))
 }
 
 func (a *App) shutdownModules() {
@@ -86,11 +84,11 @@ func (a *App) shutdownModules() {
 		module := modules[len(modules)-1-n]
 
 		if err := module.Shutdown(ctx); err != nil {
-			zap.L().Warn(module.Name(), zap.String("status", err.Error()))
+			zap.L().Warn("Stopped", adapters.TypeField(module), zap.String("status", err.Error()))
 		} else {
-			zap.L().Info(module.Name(), zap.String("status", "stopped"))
+			zap.L().Info("Stopped", adapters.TypeField(module))
 		}
 	}
 
-	zap.L().Info("App", zap.String("status", "stopped"))
+	zap.L().Info("Stopped", adapters.TypeField(a))
 }
