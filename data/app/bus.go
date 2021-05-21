@@ -27,6 +27,7 @@ func NewBus(repo Repo, eventBusTimeouts time.Duration, iss *gomoex.ISSClient) *B
 	rules := []domain.Rule{
 		NewUoW(repo, eventBusTimeouts),
 		domain.NewUpdateTradingDates(iss),
+		domain.NewUpdateUSD(iss),
 	}
 
 	bus := Bus{
