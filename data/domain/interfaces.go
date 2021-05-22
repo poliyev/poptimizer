@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"fmt"
 )
 
 // Типы для идентификаторов таблиц.
@@ -15,7 +14,6 @@ type (
 
 // Identifiable - талицы и связанные с ними объекты.
 type Identifiable interface {
-	fmt.Stringer
 	Group() Group
 	Name() Name
 }
@@ -39,10 +37,6 @@ func (i ID) Group() Group {
 // Name названия таблицы в рамках группы или связанного с ней события.
 func (i ID) Name() Name {
 	return i.name
-}
-
-func (i ID) String() string {
-	return fmt.Sprintf("ID(%s, %s)", i.Group(), i.Name())
 }
 
 // Event - событие, произошедшее при попытке обновить таблицу.
