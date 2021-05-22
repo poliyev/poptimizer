@@ -37,31 +37,23 @@ func cleanRepo(t *testing.T, repo *Repo) {
 }
 
 var (
-	testID             = domain.NewID(domain.GroupTradingDates, domain.GroupTradingDates)
-	testRow            = gomoex.Date{From: time.Time{}, Till: time.Time{}.AddDate(1, 0, 0)}
-	testTable          = domain.TradingDates{ID: testID}
-	testUnmarshalEvent = domain.UpdateRequired{Template: &testTable}
+	testID  = domain.NewID(domain.GroupTradingDates, domain.GroupTradingDates)
+	testRow = gomoex.Date{From: time.Time{}, Till: time.Time{}.AddDate(1, 0, 0)}
 )
 
 func TestRepoUnmarshalAbsentTable(t *testing.T) {
 	repo := prepareRepo(t)
 	defer cleanRepo(t, repo)
 
-	table, err := repo.Unmarshal(context.Background(), testUnmarshalEvent)
+	template := domain.TradingDates{ID: testID}
+	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить таблицу")
 
 		return
 	}
 
-	dates, ok := table.(*domain.TradingDates)
-	if !ok {
-		t.Error("Некорректная таблица")
-
-		return
-	}
-
-	assert.Nil(t, dates.Rows)
+	assert.Nil(t, template.Rows)
 }
 
 func TestRepoSaveReplaceEvent(t *testing.T) {
@@ -78,21 +70,15 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 		t.Error("Не удалось сохранить таблицу")
 	}
 
-	table, err := repo.Unmarshal(context.Background(), testUnmarshalEvent)
+	template := domain.TradingDates{ID: testID}
+	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")
 
 		return
 	}
 
-	dates, ok := table.(*domain.TradingDates)
-	if !ok {
-		t.Error("Некорректная таблица")
-
-		return
-	}
-
-	rows := dates.Rows
+	rows := template.Rows
 	assert.Equal(t, 1, len(rows))
 	assert.Equal(t, testRow, rows[0])
 }
@@ -111,21 +97,15 @@ func TestRepoSaveAppendEvent(t *testing.T) {
 		t.Error("Не удалось сохранить таблицу")
 	}
 
-	table, err := repo.Unmarshal(context.Background(), testUnmarshalEvent)
+	template := domain.TradingDates{ID: testID}
+	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")
 
 		return
 	}
 
-	dates, ok := table.(*domain.TradingDates)
-	if !ok {
-		t.Error("Некорректная таблица")
-
-		return
-	}
-
-	rows := dates.Rows
+	rows := template.Rows
 	assert.Equal(t, 2, len(rows))
 	assert.Equal(t, testRow, rows[0])
 }

@@ -50,17 +50,17 @@ func (r *Repo) Shutdown(ctx context.Context) error {
 }
 
 // Unmarshal заполняет шаблон таблицы из события.
-func (r *Repo) Unmarshal(ctx context.Context, event domain.UpdateRequired) (domain.Table, error) {
-	collection := r.db.Collection(string(event.Group()))
-	err := collection.FindOne(ctx, bson.M{"_id": event.Name()}).Decode(event.Template)
+func (r *Repo) Unmarshal(ctx context.Context, table domain.Table) error {
+	collection := r.db.Collection(string(table.Group()))
+	err := collection.FindOne(ctx, bson.M{"_id": table.Name()}).Decode(table)
 
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
-		return event.Template, nil
+		return nil
 	case err == nil:
-		return event.Template, nil
+		return nil
 	default:
-		return nil, fmt.Errorf("repo load error %s: %w", event, err)
+		return fmt.Errorf("repo load error %s: %w", table, err)
 	}
 }
 
