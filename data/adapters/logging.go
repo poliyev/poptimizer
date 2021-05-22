@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"poptimizer/data/domain"
 	"strings"
 
 	"go.uber.org/zap"
@@ -68,9 +69,20 @@ func (l Logger) Shutdown(_ context.Context) error {
 	return nil
 }
 
-// TypeField - поле для логера с коротким типом объекта (с убранным знаком указателя и путем к нему).
-func TypeField(value interface{}) zap.Field {
+// EventField - поле для логера с коротким типом события и ID.
+func EventField(value domain.Event) zap.Field {
+	id := fmt.Sprintf("%s(%s, %s)", shortType(value), value.Group(), value.Name())
+
+	return zap.String("event", id)
+}
+
+// TypeField - поле для логера с коротким типом объекта.
+func TypeField(name string, value interface{}) zap.Field {
+	return zap.String(name, shortType(value))
+}
+
+func shortType(value interface{}) string {
 	parts := strings.Split(fmt.Sprintf("%T", value), ".")
 
-	return zap.String("type", parts[len(parts)-1])
+	return parts[len(parts)-1]
 }

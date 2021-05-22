@@ -8,8 +8,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestTypeField(t *testing.T) {
-	out := zap.String("type", "RowsAppended")
+func TestEventField(t *testing.T) {
+	out := zap.String("event", "RowsAppended(a, b)")
 
-	assert.Equal(t, out, TypeField(&domain.RowsAppended{}))
+	assert.Equal(t, out, EventField(&domain.RowsAppended{ID: domain.NewID("a", "b")}))
+}
+
+func TestTypeField(t *testing.T) {
+	out := zap.String("test", "RowsAppended")
+
+	assert.Equal(t, out, TypeField("test", &domain.RowsAppended{}))
 }
