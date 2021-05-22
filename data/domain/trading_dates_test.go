@@ -67,7 +67,7 @@ func TestAfterNextISSDailyUpdate(t *testing.T) {
 	assert.Equal(t, out, nextISSDailyUpdate(in, prepareZone("Europe/Moscow")))
 }
 
-var testEvent = UpdateRequired{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: nil}}
+var testEvent = UpdateRequired{[]Table{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: nil}}}
 
 func TestTradingDayAppStartOutInNotBlocks(t *testing.T) {
 	in := make(chan Event)

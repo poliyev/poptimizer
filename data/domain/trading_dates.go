@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/WLM1ke/gomoex"
@@ -26,14 +27,20 @@ func (t TradingDates) Update(ctx context.Context) []Event {
 
 	switch {
 	case err != nil:
-		zap.L().Panic("Не удалось получить данные ISS", zap.Error(err))
+		return []Event{UpdateError{t.ID, err}}
 	case len(newRows) != 1:
-		zap.L().Panic("Ошибка валидации данных ISS", zap.Error(err))
+		err = fmt.Errorf("неправильное количество строк %d", len(newRows))
+
+		return []Event{UpdateError{t.ID, err}}
 	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
 		return []Event{RowsReplaced{t.ID, newRows}}
 	}
 
 	return nil
+}
+
+func (t TradingDates) lastDate() time.Time {
+	return t.Rows[0].Till
 }
 
 // Информация о торгах публикуется на MOEX ISS в 0:45 по московскому времени на следующий день.
@@ -95,7 +102,7 @@ func NewUpdateTradingDates(iss *gomoex.ISSClient) *UpdateTradingDates {
 func (d *UpdateTradingDates) Activate(ctx context.Context, in <-chan Event, out chan<- Event) {
 	defer d.stopFn()
 
-	out <- UpdateRequired{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: d.iss}}
+	d.sendEvent(out)
 
 	now := time.Now()
 	nextDataUpdate := nextISSDailyUpdate(now, d.tz)
@@ -106,12 +113,15 @@ func (d *UpdateTradingDates) Activate(ctx context.Context, in <-chan Event, out 
 			continue
 		case now = <-d.ticker:
 			if now.After(nextDataUpdate) {
-				out <- UpdateRequired{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: d.iss}}
-
+				d.sendEvent(out)
 				nextDataUpdate = nextISSDailyUpdate(now, d.tz)
 			}
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (d *UpdateTradingDates) sendEvent(out chan<- Event) {
+	out <- UpdateRequired{[]Table{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: d.iss}}}
 }
