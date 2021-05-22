@@ -60,19 +60,19 @@ func (a *App) startModules() {
 
 	for _, module := range a.modules {
 		if err := module.Start(startCtx); err != nil {
-			zap.L().Panic("Starting", adapters.TypeField(module), zap.String("status", err.Error()))
+			zap.L().Panic("Starting", adapters.TypeField("module", module), zap.String("status", err.Error()))
 		}
 
-		zap.L().Info("Starting", adapters.TypeField(module))
+		zap.L().Info("Starting", adapters.TypeField("module", module))
 	}
 
-	zap.L().Info("Started", adapters.TypeField(a))
+	zap.L().Info("App has started")
 }
 
 func (a *App) terminated() {
 	signal.Notify(a.stop, syscall.SIGINT, syscall.SIGTERM)
 	<-a.stop
-	zap.L().Info("Stopping", adapters.TypeField(a))
+	zap.L().Info("App is stopping...")
 }
 
 func (a *App) shutdownModules() {
@@ -84,11 +84,11 @@ func (a *App) shutdownModules() {
 		module := modules[len(modules)-1-n]
 
 		if err := module.Shutdown(ctx); err != nil {
-			zap.L().Warn("Stopped", adapters.TypeField(module), zap.String("status", err.Error()))
+			zap.L().Warn("Stopped", adapters.TypeField("module", module), zap.String("status", err.Error()))
 		} else {
-			zap.L().Info("Stopped", adapters.TypeField(module))
+			zap.L().Info("Stopped", adapters.TypeField("module", module))
 		}
 	}
 
-	zap.L().Info("Stopped", adapters.TypeField(a))
+	zap.L().Info("App has stopped")
 }
