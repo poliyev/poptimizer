@@ -25,6 +25,7 @@ type Bus struct {
 // NewBus - создает шину для обработки событий.
 func NewBus(repo Repo, eventBusTimeouts time.Duration, iss *gomoex.ISSClient) *Bus {
 	rules := []domain.Rule{
+		ErrorsHandler{},
 		NewUoW(repo, eventBusTimeouts),
 		domain.NewUpdateTradingDates(iss),
 		domain.NewUpdateUSD(iss),
@@ -55,9 +56,9 @@ func (b *Bus) Start(_ context.Context) error {
 		go func() {
 			defer b.wg.Done()
 
-			zap.L().Info("Rule activated", adapters.TypeField(rule))
+			zap.L().Info("Activated", adapters.TypeField("rule", rule))
 			rule.Activate(ctx, in, events)
-			zap.L().Info("Rule deactivated", adapters.TypeField(rule))
+			zap.L().Info("Deactivated", adapters.TypeField("rule", rule))
 		}()
 	}
 
@@ -81,7 +82,7 @@ func (b *Bus) loop(ctx context.Context, events chan domain.Event, consumers []ch
 			go func() {
 				defer b.wg.Done()
 
-				zap.L().Info("Event", adapters.TypeField(event), zap.Stringer("id", event))
+				zap.L().Info("Handling", adapters.EventField(event))
 
 				for _, consumer := range consumers {
 					consumer <- event

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"poptimizer/data/domain"
 	"testing"
 
@@ -21,7 +22,7 @@ func (t TestRule) Activate(ctx context.Context, in <-chan domain.Event, out chan
 	for {
 		select {
 		case event := <-in:
-			t.flow <- "Event consumed " + event.String()
+			t.flow <- fmt.Sprintf("Event consumed ID(%s, %s)", event.Group(), event.Name())
 		case <-ctx.Done():
 			t.flow <- "Stopped"
 
