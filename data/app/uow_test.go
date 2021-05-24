@@ -21,8 +21,8 @@ func (t *TestTable) Update(_ context.Context) []domain.Event {
 
 type TestRepo struct{}
 
-func (t TestRepo) Unmarshal(_ context.Context, event domain.UpdateRequired) (domain.Table, error) {
-	return event.Template, nil
+func (t TestRepo) Unmarshal(_ context.Context, _ domain.Table) error {
+	return nil
 }
 
 func (t TestRepo) Replace(_ context.Context, _ domain.RowsReplaced) error {
@@ -48,7 +48,11 @@ func TestUoWNotHandelNonUpdateEvents(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		uow.Activate(ctx, in, nil)
+		assert.NotPanics(t, func() {
+			uow.Activate(ctx, in, nil)
+		},
+			"Правило должно паниковать при ошибочных событиях",
+		)
 	}()
 
 	// Была ошибка с завершением работы после первого необрабатываемого события
@@ -61,7 +65,7 @@ func TestUoWNotHandelNonUpdateEvents(t *testing.T) {
 
 func TestUoWAppendRowsUpdate(t *testing.T) {
 	table := TestTable{domain.ID{}, domain.RowsAppended{}}
-	event := domain.UpdateRequired{Template: &table}
+	event := domain.UpdateRequired{Templates: []domain.Table{&table}}
 
 	repo := TestRepo{}
 	uow := NewUoW(&repo, time.Second)
@@ -94,7 +98,7 @@ func TestUoWAppendRowsUpdate(t *testing.T) {
 
 func TestUoWReplaceRowsUpdate(t *testing.T) {
 	table := TestTable{domain.ID{}, domain.RowsReplaced{}}
-	event := domain.UpdateRequired{Template: &table}
+	event := domain.UpdateRequired{Templates: []domain.Table{&table}}
 
 	repo := TestRepo{}
 	uow := NewUoW(&repo, time.Second)

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
 	"sync"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 // Repo осуществляет восстановление талицы и сохранение новых строк.
 type Repo interface {
-	Unmarshal(ctx context.Context, event domain.UpdateRequired) (domain.Table, error)
+	Unmarshal(ctx context.Context, table domain.Table) error
 	Replace(ctx context.Context, event domain.RowsReplaced) error
 	Append(ctx context.Context, event domain.RowsAppended) error
 }
@@ -53,8 +54,7 @@ func (u UoW) Activate(ctx context.Context, in <-chan domain.Event, out chan<- do
 				eventCtx, cancel := context.WithTimeout(ctx, u.timeout)
 				defer cancel()
 
-				table := u.unmarshalTable(eventCtx, update)
-
+				table := u.unmarshalTables(eventCtx, update)
 				for _, event := range table.Update(eventCtx) {
 					u.saveChanges(eventCtx, event)
 					out <- event
@@ -69,24 +69,26 @@ func (u UoW) Activate(ctx context.Context, in <-chan domain.Event, out chan<- do
 	}
 }
 
-func (u UoW) unmarshalTable(ctx context.Context, event domain.UpdateRequired) domain.Table {
-	table, err := u.repo.Unmarshal(ctx, event)
-	if err != nil {
-		zap.L().Panic("Unmarshal table", zap.Stringer("id", event), zap.Error(err))
+func (u UoW) unmarshalTables(ctx context.Context, event domain.UpdateRequired) domain.Table {
+	for _, table := range event.Templates {
+		err := u.repo.Unmarshal(ctx, table)
+		if err != nil {
+			zap.L().Panic("Unmarshal table", adapters.EventField(event), zap.Error(err))
+		}
 	}
 
-	return table
+	return event.Templates[0]
 }
 
 func (u UoW) saveChanges(ctx context.Context, event domain.Event) {
 	switch event := event.(type) {
 	case domain.RowsReplaced:
 		if err := u.repo.Replace(ctx, event); err != nil {
-			zap.L().Panic("Replace rows", zap.Stringer("id", event), zap.Error(err))
+			zap.L().Panic("Replace rows", adapters.EventField(event), zap.Error(err))
 		}
 	case domain.RowsAppended:
 		if err := u.repo.Append(ctx, event); err != nil {
-			zap.L().Panic("Append rows", zap.Stringer("id", event), zap.Error(err))
+			zap.L().Panic("Append rows", adapters.EventField(event), zap.Error(err))
 		}
 	}
 }
