@@ -113,7 +113,7 @@ func TestAfterNextISSDailyUpdate(t *testing.T) {
 	assert.Equal(t, out, nextISSDailyUpdate(in, prepareZone("Europe/Moscow")))
 }
 
-var testEvent = UpdateRequired{[]Table{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: nil}}}
+var testDatesEvent = UpdateRequired{[]Table{&TradingDates{ID: NewID(GroupTradingDates, GroupTradingDates), iss: nil}}}
 
 func TestTradingDayAppStartOutInNotBlocks(t *testing.T) {
 	in := make(chan Event)
@@ -135,10 +135,10 @@ func TestTradingDayAppStartOutInNotBlocks(t *testing.T) {
 	for {
 		select {
 		case result := <-out:
-			assert.Equal(t, testEvent, result)
+			assert.Equal(t, testDatesEvent, result)
 
 			firstOut = true
-		case in <- testEvent:
+		case in <- testDatesEvent:
 			inNotBlocks = true
 		}
 
@@ -173,7 +173,7 @@ func TestTradingDayNextUpdate(t *testing.T) {
 	now := time.Now()
 	timer <- nextISSDailyUpdate(now, testMoscowTZ).Add(time.Second)
 
-	assert.Equal(t, testEvent, <-out)
+	assert.Equal(t, testDatesEvent, <-out)
 
 	// До начала следующего дня обновление таймера не порождает команд
 	close(out)

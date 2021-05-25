@@ -80,15 +80,20 @@ func (u *UpdateUSD) Activate(ctx context.Context, in <-chan Event, out chan<- Ev
 				continue
 			}
 
-			dates := TradingDates{ID: ID{GroupTradingDates, GroupTradingDates}, iss: u.iss}
-			out <- UpdateRequired{
-				[]Table{
-					&USD{ID: NewID(GroupUSD, GroupUSD), iss: u.iss, dates: &dates},
-					&dates,
-				},
-			}
+			out <- makeUSDEvent(u.iss)
 		case <-ctx.Done():
 			return
 		}
+	}
+}
+
+func makeUSDEvent(iss CandlesGateway) UpdateRequired {
+	dates := TradingDates{ID: ID{GroupTradingDates, GroupTradingDates}, iss: iss}
+
+	return UpdateRequired{
+		[]Table{
+			&USD{ID: NewID(GroupUSD, GroupUSD), iss: iss, dates: &dates},
+			&dates,
+		},
 	}
 }
