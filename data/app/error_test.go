@@ -2,10 +2,11 @@ package app
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"poptimizer/data/domain"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNonErrorEvent(t *testing.T) {

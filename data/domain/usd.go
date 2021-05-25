@@ -3,8 +3,9 @@ package domain
 import (
 	"context"
 	"fmt"
-	"github.com/WLM1ke/gomoex"
 	"time"
+
+	"github.com/WLM1ke/gomoex"
 )
 
 // GroupUSD группа таблицы с курсом доллара.
@@ -30,7 +31,8 @@ type USD struct {
 	Rows []gomoex.Candle
 }
 
-func (u USD) Update(ctx context.Context) []Event {
+// Update инкрементально обновляет таблицу и проверяет совпадение последней строки.
+func (u *USD) Update(ctx context.Context) []Event {
 	startDate := ""
 	if u.Rows != nil {
 		startDate = dateToISSString(u.Rows[len(u.Rows)-1].Begin)
@@ -46,7 +48,7 @@ func (u USD) Update(ctx context.Context) []Event {
 	case u.Rows == nil:
 		return []Event{RowsAppended{u.ID, newData}}
 	case u.Rows[len(u.Rows)-1] != newData[0]:
-		err = fmt.Errorf("не совпадают данные %+v != %+v", u.Rows[len(u.Rows)-1], newData[0])
+		err = fmt.Errorf("%w: не совпадают данные %+v != %+v", ErrDataValidation, u.Rows[len(u.Rows)-1], newData[0])
 
 		return []Event{UpdateError{u.ID, err}}
 	default:

@@ -3,11 +3,12 @@ package domain
 import (
 	"context"
 	"fmt"
-	"github.com/WLM1ke/gomoex"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/WLM1ke/gomoex"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDateToISSString(t *testing.T) {
@@ -24,7 +25,7 @@ type TestCandlesGateway struct {
 	err   error
 }
 
-func (t *TestCandlesGateway) MarketDates(_ context.Context, _ string, _ string) ([]gomoex.Date, error) {
+func (t *TestCandlesGateway) MarketDates(_ context.Context, _, _ string) ([]gomoex.Date, error) {
 	panic("implement me")
 }
 
@@ -34,6 +35,7 @@ func (t *TestCandlesGateway) MarketCandles(_ context.Context, engine, market, ti
 		last || interval != 24 {
 		panic("некорректные аргументы")
 	}
+
 	return t.rows, t.err
 }
 
@@ -120,8 +122,8 @@ func TestUpdateUSDWrongEvent(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		producer := NewUpdateUSD(nil)
 		assert.NotPanics(t, func() {
+			producer := NewUpdateUSD(nil)
 			producer.Activate(ctx, in, nil)
 		})
 	}()
@@ -168,7 +170,6 @@ func TestUpdateUSDRightEvent(t *testing.T) {
 }
 
 func TestMakeUSDEvent(t *testing.T) {
-
 	event := makeUSDEvent(nil)
 
 	assert.Equal(t, 2, len(event.Templates))
@@ -183,5 +184,4 @@ func TestMakeUSDEvent(t *testing.T) {
 	assert.Equal(t, Name(GroupTradingDates), second.Name())
 
 	assert.Equal(t, second, first.dates)
-
 }

@@ -46,6 +46,7 @@ func TestRepoUnmarshalAbsentTable(t *testing.T) {
 	defer cleanRepo(t, repo)
 
 	template := domain.TradingDates{ID: testID}
+
 	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить таблицу")
@@ -71,6 +72,7 @@ func TestRepoSaveReplaceEvent(t *testing.T) {
 	}
 
 	template := domain.TradingDates{ID: testID}
+
 	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")
@@ -98,6 +100,7 @@ func TestRepoSaveAppendEvent(t *testing.T) {
 	}
 
 	template := domain.TradingDates{ID: testID}
+
 	err := repo.Unmarshal(context.Background(), &template)
 	if err != nil {
 		t.Error("Не удалось загрузить сохраненную таблицу")

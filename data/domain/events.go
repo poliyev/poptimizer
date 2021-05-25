@@ -1,5 +1,7 @@
 package domain
 
+import "errors"
+
 // UpdateRequired требуется обновление таблицы.
 //
 // Событие содержит указатели на незаполненные таблицы с правильным ID, которые нужны для построения агрегата, начиная с таблицы,
@@ -23,6 +25,9 @@ type UpdateError struct {
 	ID
 	Error error
 }
+
+// ErrDataValidation - ошибка при проверке корректности обновлений для таблиц.
+var ErrDataValidation = errors.New("ошибка валидации данных")
 
 // RowsReplaced - событие замены всех строк в таблице.
 //

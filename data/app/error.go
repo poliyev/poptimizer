@@ -2,14 +2,14 @@ package app
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"poptimizer/data/adapters"
 	"poptimizer/data/domain"
+
+	"go.uber.org/zap"
 )
 
 // ErrorsHandler - правило обработки ошибок.
-type ErrorsHandler struct {
-}
+type ErrorsHandler struct{}
 
 // Activate - активирует правило.
 //
@@ -22,6 +22,7 @@ func (e ErrorsHandler) Activate(ctx context.Context, in <-chan domain.Event, _ c
 			if !ok {
 				continue
 			}
+
 			zap.L().Panic("Error", adapters.EventField(errorEvent), zap.Error(errorEvent.Error))
 		case <-ctx.Done():
 			return

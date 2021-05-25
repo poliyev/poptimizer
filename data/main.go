@@ -5,13 +5,17 @@ import (
 	"time"
 )
 
+const (
+	issMaxCons     = 20
+	serverTimeouts = time.Millisecond * 40
+)
+
 func main() {
-	issMaxCons := 20
 	cfg := &config.Config{
 		StartTimeout:     time.Minute,
 		ShutdownTimeout:  time.Minute,
 		ServerAddr:       "localhost:3000",
-		ServerTimeouts:   time.Millisecond * 40,
+		ServerTimeouts:   serverTimeouts,
 		EventBusTimeouts: time.Minute,
 		ISSMaxCons:       issMaxCons,
 		MongoURI:         "mongodb://localhost:27017",

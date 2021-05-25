@@ -34,7 +34,7 @@ func (t TradingDates) Update(ctx context.Context) []Event {
 	case err != nil:
 		return []Event{UpdateError{t.ID, err}}
 	case len(newRows) != 1:
-		err = fmt.Errorf("неправильное количество строк %d", len(newRows))
+		err = fmt.Errorf("%w: неправильное количество строк %d", ErrDataValidation, len(newRows))
 
 		return []Event{UpdateError{t.ID, err}}
 	case t.Rows == nil:

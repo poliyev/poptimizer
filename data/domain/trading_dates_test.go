@@ -17,7 +17,7 @@ type TestTradingDatesGateway struct {
 	err  error
 }
 
-func (t *TestTradingDatesGateway) MarketDates(_ context.Context, engine string, market string) ([]gomoex.Date, error) {
+func (t *TestTradingDatesGateway) MarketDates(_ context.Context, engine, market string) ([]gomoex.Date, error) {
 	if engine != gomoex.EngineStock || market != gomoex.MarketShares {
 		panic("некорректные аргументы")
 	}
