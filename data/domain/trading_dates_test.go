@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -12,8 +12,46 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type TestTradingDatesGateway struct {
+	rows []gomoex.Date
+	err  error
+}
+
+func (t *TestTradingDatesGateway) MarketDates(_ context.Context, engine string, market string) ([]gomoex.Date, error) {
+	if engine != gomoex.EngineStock || market != gomoex.MarketShares {
+		panic("некорректные аргументы")
+	}
+
+	return t.rows, t.err
+}
+
+func TestTradingDatesGatewayError(t *testing.T) {
+	iss := TestTradingDatesGateway{nil, fmt.Errorf("err")}
+	table := TradingDates{iss: &iss}
+
+	events := table.Update(context.Background())
+	assert.Equal(t, 1, len(events))
+
+	_, ok := events[0].(UpdateError)
+	assert.True(t, ok)
+}
+
+func TestTradingDatesValidationError(t *testing.T) {
+	rows := []gomoex.Date{{}, {}}
+	iss := TestTradingDatesGateway{rows, nil}
+	table := TradingDates{iss: &iss}
+
+	events := table.Update(context.Background())
+	assert.Equal(t, 1, len(events))
+
+	_, ok := events[0].(UpdateError)
+	assert.True(t, ok)
+}
+
 func TestTradingDatesFirstUpdate(t *testing.T) {
-	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient)}
+	rows := []gomoex.Date{{}}
+	iss := TestTradingDatesGateway{rows, nil}
+	table := TradingDates{iss: &iss}
 
 	events := table.Update(context.Background())
 	assert.Equal(t, 1, len(events))
@@ -23,8 +61,9 @@ func TestTradingDatesFirstUpdate(t *testing.T) {
 }
 
 func TestTradingDatesReplaceUpdate(t *testing.T) {
-	rows := []gomoex.Date{{}}
-	table := TradingDates{iss: gomoex.NewISSClient(http.DefaultClient), Rows: rows}
+	rows := []gomoex.Date{{Till: time.Now()}}
+	iss := TestTradingDatesGateway{rows, nil}
+	table := TradingDates{iss: &iss, Rows: []gomoex.Date{{}}}
 
 	events := table.Update(context.Background())
 	assert.Equal(t, 1, len(events))
@@ -33,13 +72,20 @@ func TestTradingDatesReplaceUpdate(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestTradingDatesEmptyUpdate(t *testing.T) {
-	iss := gomoex.NewISSClient(http.DefaultClient)
-	rows, _ := iss.MarketDates(context.Background(), gomoex.EngineStock, gomoex.MarketShares)
-	table := TradingDates{iss: iss, Rows: rows}
+func TestTradingDatesNoUpdate(t *testing.T) {
+	rows := []gomoex.Date{{}}
+	iss := TestTradingDatesGateway{rows, nil}
+	table := TradingDates{iss: &iss, Rows: []gomoex.Date{{}}}
 
 	events := table.Update(context.Background())
 	assert.Nil(t, events)
+}
+
+func TestTradingDatesLastDate(t *testing.T) {
+	last := time.Now()
+	table := TradingDates{Rows: []gomoex.Date{{Till: last}}}
+
+	assert.Equal(t, last, table.lastDate())
 }
 
 var testMoscowTZ = prepareZone("Europe/Moscow")

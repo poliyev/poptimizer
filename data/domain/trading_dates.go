@@ -12,11 +12,16 @@ import (
 // GroupTradingDates - группа таблицы с торговыми данными.
 const GroupTradingDates = "trading_dates"
 
+// TradingDatesGateway получает актуальную информацию о торговых датах.
+type TradingDatesGateway interface {
+	MarketDates(ctx context.Context, engine string, market string) ([]gomoex.Date, error)
+}
+
 // TradingDates - таблица с диапазоном торговых дат.
 type TradingDates struct {
 	ID
 
-	iss *gomoex.ISSClient
+	iss TradingDatesGateway
 
 	Rows []gomoex.Date
 }
@@ -32,7 +37,9 @@ func (t TradingDates) Update(ctx context.Context) []Event {
 		err = fmt.Errorf("неправильное количество строк %d", len(newRows))
 
 		return []Event{UpdateError{t.ID, err}}
-	case t.Rows == nil, !newRows[0].Till.Equal(t.Rows[0].Till):
+	case t.Rows == nil:
+		return []Event{RowsReplaced{t.ID, newRows}}
+	case !newRows[0].Till.Equal(t.Rows[0].Till):
 		return []Event{RowsReplaced{t.ID, newRows}}
 	}
 
@@ -76,7 +83,7 @@ func nextISSDailyUpdate(now time.Time, tz *time.Location) time.Time {
 // Так как компьютер может заснуть, что вызывает расхождение между монотонным и фактическим временем,
 // то проверку публикации данных лучше проводить на регулярной основе, а не привязать к конкретному времени.
 type UpdateTradingDates struct {
-	iss *gomoex.ISSClient
+	iss TradingDatesGateway
 	tz  *time.Location
 
 	ticker <-chan time.Time
@@ -84,7 +91,7 @@ type UpdateTradingDates struct {
 }
 
 // NewUpdateTradingDates создает правило.
-func NewUpdateTradingDates(iss *gomoex.ISSClient) *UpdateTradingDates {
+func NewUpdateTradingDates(iss TradingDatesGateway) *UpdateTradingDates {
 	ticker := time.NewTicker(time.Hour)
 
 	return &UpdateTradingDates{
