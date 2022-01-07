@@ -13,7 +13,7 @@ _MONGO_PATH: Final = pathlib.Path(__file__).parents[2] / "db"
 _MONGO_URI: Final = "mongodb://localhost:27017"
 
 # Размер пула http-соединений - при большем размере многие сайты ругаются
-_POOL_SIZE: Final = 20
+_POOL_SIZE: Final = 1
 
 
 def _find_running_mongo_db() -> Optional[psutil.Process]:
@@ -31,7 +31,7 @@ def start_mongo_server() -> psutil.Process:
 
     _MONGO_PATH.mkdir(parents=True, exist_ok=True)
     mongo_server = [
-        "mongod",
+        "D:\\Drive\\programs\\mongodb\\bin\\mongod",
         "--dbpath",
         _MONGO_PATH,
         "--directoryperdb",

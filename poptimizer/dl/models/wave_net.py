@@ -7,6 +7,7 @@ from torch import distributions, nn
 
 from poptimizer.config import DEVICE, POptimizerError
 from poptimizer.dl.features import FeatureType
+#import gc
 
 EPS = torch.tensor(torch.finfo().eps)
 
@@ -68,6 +69,12 @@ class SubBlock(nn.Module):
         y = y_signal * y_gate
         y = self.output_conv(y)
 
+		""" Дописал очистку памяти """
+        # del y_signal, y_gate
+        # gc.collect()
+        # if DEVICE == torch.device("cuda"):
+        #     torch.cuda.empty_cache()
+		
         return y + x
 
 

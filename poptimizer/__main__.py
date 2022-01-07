@@ -2,6 +2,7 @@
 import logging
 
 import typer
+import os
 
 from poptimizer import config
 from poptimizer.data.views import div_status
@@ -9,6 +10,8 @@ from poptimizer.evolve import Evolution
 from poptimizer.portfolio import load_from_yaml, optimizer_hmean, optimizer_resample
 
 LOGGER = logging.getLogger()
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def evolve() -> None:

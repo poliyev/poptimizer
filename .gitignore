@@ -118,3 +118,4 @@ ENV/
 
 # Poptimizer logs
 /logs/
+_LAST_RECOMMENDATION.txt
