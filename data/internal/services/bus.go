@@ -1,53 +1,46 @@
-package bus
+package services
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/WLM1ke/poptimizer/data/internal/rules/errors"
-	"github.com/WLM1ke/poptimizer/data/internal/rules/events"
+	"github.com/WLM1ke/poptimizer/data/internal/domain"
 	"github.com/WLM1ke/poptimizer/data/pkg/lgr"
 )
+
+const _timeFormat = "2006-01-02"
 
 // errUnprocessedEvent ошибка связанная с наличием необработанных ошибок в момент завершения работы шины событий.
 var errUnprocessedEvent = fmt.Errorf("unprocessed event")
 
-// Rule представляет доменное правило.
-//
-// Правило получает события, осуществляет модификацию сущностей и формирует новые события по результатам изменений.
-// Работа правила должна останавливаться при закрытии входящего канала, а чтение входящих событий должно осуществляться
-// с минимальной блокировкой.
-type Rule interface {
-	Activate(in <-chan events.Event, out chan<- events.Event)
-}
-
 // EventBus осуществляет перенаправление исходящих событий правилам по их обработке.
 type EventBus struct {
 	logger *lgr.Logger
-	rules  []Rule
+	rules  []domain.Rule
 
 	// inbox канал в который правила записывают новые события
-	inbox chan events.Event
+	inbox chan domain.Event
 	// broadcast канал в который направляются события из inbox для рассылки в каналы отдельных правил
-	broadcast chan events.Event
+	broadcast chan domain.Event
 	// consumers входные каналы правил, в которые дублируются события из broadcast
-	consumers []chan events.Event
+	consumers []chan domain.Event
 
 	wg sync.WaitGroup
 }
 
 // NewEventBus создает шину событий со всеми правилами обработки событий.
 func NewEventBus(logger *lgr.Logger) *EventBus {
-	rules := []Rule{
-		errors.New(logger),
+	rules := []domain.Rule{
+		NewErrorsRule(logger),
+		NewTickerRule(logger),
 	}
 
 	return &EventBus{
 		logger:    logger,
 		rules:     rules,
-		inbox:     make(chan events.Event),
-		broadcast: make(chan events.Event),
+		inbox:     make(chan domain.Event),
+		broadcast: make(chan domain.Event),
 	}
 }
 
@@ -74,16 +67,17 @@ func (b *EventBus) Run(ctx context.Context) error {
 
 func (b *EventBus) activateConsumers() {
 	for _, rule := range b.rules {
-		consumer := make(chan events.Event)
+		rule := rule
+		consumer := make(chan domain.Event)
 		b.consumers = append(b.consumers, consumer)
 
 		b.wg.Add(1)
 
-		go func(rule Rule) {
+		go func() {
 			defer b.wg.Done()
 
 			rule.Activate(consumer, b.inbox)
-		}(rule)
+		}()
 	}
 }
 
@@ -107,20 +101,25 @@ func (b *EventBus) formInboxToBroadcast(ctx context.Context) {
 
 			return
 		case event := <-b.inbox:
-			b.logger.Infof("EventBus: %v", event)
+			b.logger.Infof(
+				"EventBus: processing Event(%s, %s, %s)",
+				event.Group(),
+				event.Name(),
+				event.Date().UTC().Format(_timeFormat),
+			)
 			b.broadcast <- event
 		}
 	}
 }
 
-func (b *EventBus) drainUnprocessedEvents(inbox <-chan events.Event) (count int) {
+func (b *EventBus) drainUnprocessedEvents(inbox <-chan domain.Event) (count int) {
 	go func() {
 		b.wg.Wait()
 		close(b.inbox)
 	}()
 
 	for event := range inbox {
-		b.logger.Warnf("EventBus: unprocessed %v", event)
+		b.logger.Warnf("EventBus: unprocessed %#v", event)
 		count++
 	}
 

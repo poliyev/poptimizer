@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"github.com/WLM1ke/poptimizer/data/internal/bus"
-	"github.com/WLM1ke/poptimizer/data/internal/handler"
+	"github.com/WLM1ke/poptimizer/data/internal/api"
+	"github.com/WLM1ke/poptimizer/data/internal/services"
 	"github.com/WLM1ke/poptimizer/data/pkg/app"
 	"github.com/WLM1ke/poptimizer/data/pkg/http"
 	"github.com/WLM1ke/poptimizer/data/pkg/lgr"
@@ -24,9 +24,9 @@ func main() {
 			logger,
 			_addr,
 			time.Second,
-			handler.GetBSON(),
+			api.GetBSON(),
 		),
-		bus.NewEventBus(logger),
+		services.NewEventBus(logger),
 	}
 
 	app.Run(logger, services...)
