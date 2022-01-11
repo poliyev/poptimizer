@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-type tableDAO [R]struct {
+type tableDAO[R any] struct {
 	Name domain.Name `bson:"_id"`
 	Date time.Time   `bson:"date"`
 	Rows []R         `bson:"rows"`
 }
 
-func NewTableDAO[R comparable](table domain.Table[R]) tableDAO[R] {
+func newTableDAO[R any](table domain.Table[R]) tableDAO[R] {
 	return tableDAO[R]{
 		Name: table.Name(),
 		Date: table.Date(),
@@ -33,12 +33,12 @@ func (d tableDAO[R]) toTable(id domain.ID) domain.Table[R] {
 }
 
 // Mongo обеспечивает хранение и загрузку таблиц.
-type Mongo[R comparable] struct {
+type Mongo[R any] struct {
 	db *mongo.Database
 }
 
 // NewMongo - создает новый репозиторий на основе MongoDB.
-func NewMongo[R comparable](db *mongo.Database) *Mongo[R] {
+func NewMongo[R any](db *mongo.Database) *Mongo[R] {
 	return &Mongo[R]{
 		db: db,
 	}
@@ -53,10 +53,9 @@ func (r *Mongo[R]) Get(ctx context.Context, id domain.ID) (domain.Table[R], erro
 
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
-		return nil, fmt.Errorf(
-			"%w: %s", ErrTableNotFound, id)
+		return domain.NewTable[R](id), nil
 	case err != nil:
-		return nil, fmt.Errorf("%w: %#v - %s", ErrInternal, id, err)
+		return domain.Table[R]{}, fmt.Errorf("%w: %#v - %s", ErrInternal, id, err)
 	}
 
 	return dao.toTable(id), nil
@@ -66,8 +65,8 @@ func (r *Mongo[R]) Get(ctx context.Context, id domain.ID) (domain.Table[R], erro
 func (r *Mongo[R]) Replace(ctx context.Context, table domain.Table[R]) error {
 	collection := r.db.Collection(string(table.Group()))
 
-	filter := bson.M{"_id": table.Name}
-	update := bson.M{"$set": bson.M{"rows": table.Rows, "date": table.Date}}
+	filter := bson.M{"_id": table.Name()}
+	update := bson.M{"$set": bson.M{"rows": table.Rows, "date": table.Date()}}
 
 	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
 		return fmt.Errorf("%w: %#v - %s", ErrTableUpdate, table, err)
@@ -80,8 +79,8 @@ func (r *Mongo[R]) Replace(ctx context.Context, table domain.Table[R]) error {
 func (r *Mongo[R]) Append(ctx context.Context, table domain.Table[R]) error {
 	collection := r.db.Collection(string(table.Group()))
 
-	filter := bson.M{"_id": table.Name}
-	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": table.Rows}}}
+	filter := bson.M{"_id": table.Name()}
+	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": table.Rows}}, "$set": bson.M{"date": table.Date()}}
 
 	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
 		return fmt.Errorf("%w: %#v - %s", ErrTableUpdate, table, err)

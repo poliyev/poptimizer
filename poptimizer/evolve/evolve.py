@@ -72,8 +72,8 @@ class Evolution:  # noqa: WPS214
 
         d_min, d_max = population.min_max_date()
         if org is None:
-            self._end = d_max or listing.last_history_date()
             self._tickers = load_tickers()
+            self._end = d_max or listing.all_history_date(self._tickers)[-1]
             org = self._next_org()
 
         dates = listing.all_history_date(self._tickers, start=self._end)
@@ -135,9 +135,8 @@ class Evolution:  # noqa: WPS214
             label = "Новый"
             sign = ">"
 
-        if prey_margin < 0:
-            self._scale += 1
-
+        self._scale += ((prey_margin < 0) - 0.5) * 2
+        self._scale = max(1, self._scale)
         self._jump += 1 / self._scale
 
         self._logger.info(f"{label} родитель - delta={delta:.2%} {sign} {min_margin:.2%}\n")  # noqa: WPS221

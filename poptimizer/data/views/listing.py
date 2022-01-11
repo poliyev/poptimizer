@@ -11,27 +11,20 @@ from poptimizer.data.views import quotes
 from poptimizer.shared import col
 
 
-def last_history_date(
-    viewer: viewers.Viewer = bootstrap.VIEWER,
-    bus: bootstrap.TableBus = bootstrap.BUS,
-) -> pd.Timestamp:
-    """Последняя доступная дата исторических котировок."""
-    event = events.DateCheckRequired()
-    bus.handle_event(event)
-    df = viewer.get_df(ports.TRADING_DATES, ports.TRADING_DATES)
-    return df.loc[0, "till"]
-
-
 def all_history_date(
     tickers: tuple[str, ...],
     *,
     start: Optional[pd.Timestamp] = None,
     end: Optional[pd.Timestamp] = None,
+    bus: bootstrap.TableBus = bootstrap.BUS,
 ) -> pd.Index:
-    """Перечень дат для которых есть котировки.
+    """Перечень дат для которых есть котировки после проверки на наличие новых данных.
 
     Может быть ограничен сверху или снизу.
     """
+    event = events.DateCheckRequired()
+    bus.handle_event(event)
+
     return quotes.all_prices(tickers).loc[start:end].index
 
 
