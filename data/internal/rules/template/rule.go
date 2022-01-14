@@ -4,39 +4,47 @@ import (
 	"context"
 	"github.com/WLM1ke/poptimizer/data/internal/domain"
 	"github.com/WLM1ke/poptimizer/data/internal/repo"
+	"github.com/WLM1ke/poptimizer/data/pkg/lgr"
 	"sync"
 )
 
 type Rule[R any] struct {
-	repo    repo.ReadWrite[R]
-	selector Selector
-	gateway Gateway[R]
+	name      string
+	logger    *lgr.Logger
+	repo      repo.ReadWrite[R]
+	selector  Selector
+	gateway   Gateway[R]
 	validator Validator[R]
-	append  bool
-	ctxFunc eventCtxFunc
+	append    bool
+	ctxFunc   EventCtxFunc
 }
 
 func NewRule[R any](
+	name string,
+	logger *lgr.Logger,
 	repo repo.ReadWrite[R],
 	selector Selector,
 	gateway Gateway[R],
 	validator Validator[R],
 	append bool,
-	ctxFunc eventCtxFunc,
-	) *Rule[R] {
-	return &Rule[R]{
-		repo: repo,
-		selector: selector,
-		gateway: gateway,
+	ctxFunc EventCtxFunc,
+) Rule[R] {
+	return Rule[R]{
+		name:      name,
+		logger:    logger,
+		repo:      repo,
+		selector:  selector,
+		gateway:   gateway,
 		validator: validator,
-		append: append,
-		ctxFunc: ctxFunc,
+		append:    append,
+		ctxFunc:   ctxFunc,
 	}
 }
 
-
-
 func (r Rule[R]) Activate(in <-chan domain.Event, out chan<- domain.Event) {
+	r.logger.Infof("%s: started", r.name)
+	defer r.logger.Infof("%s: stopped", r.name)
+
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
@@ -55,28 +63,28 @@ func (r Rule[R]) Activate(in <-chan domain.Event, out chan<- domain.Event) {
 }
 
 func (r Rule[R]) handleEvent(out chan<- domain.Event, event domain.Event) {
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
 	ctx, cancel := r.ctxFunc()
 	defer cancel()
 
-	ids, err := r.selector(ctx, event)
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	ids, err := r.selector.Select(ctx, event)
 	if err != nil {
-		out <- domain.NewErrorOccurred(event, err)
+		out <- domain.ErrorOccurred{Version: event.Ver(), Err: err}
 
 		return
 	}
 
 	for _, id := range ids {
-		id := id
-
 		wg.Add(1)
+
+		ver := domain.Version{ID: id, Date: event.Ver().Date}
 
 		go func() {
 			defer wg.Done()
 
-			if newEvent := r.updateTableToVer(ctx, domain.NewVersion(id, event.Date())); newEvent != nil {
+			if newEvent := r.updateTableToVer(ctx, ver); newEvent != nil {
 				out <- newEvent
 			}
 
@@ -85,35 +93,46 @@ func (r Rule[R]) handleEvent(out chan<- domain.Event, event domain.Event) {
 }
 
 func (r Rule[R]) updateTableToVer(ctx context.Context, ver domain.Version) domain.Event {
-	ctx, cancel := r.ctxFunc()
-	defer cancel()
-
-	table, err := r.repo.Get(ctx, ver)
+	table, err := r.repo.Get(ctx, ver.ID)
 	if err != nil {
-		return domain.NewErrorOccurred(ver, err)
+		return domain.ErrorOccurred{Version: ver, Err: err}
 	}
 
-	rows, err := r.gateway(ctx, table, ver.Date())
+	rows, err := r.gateway.Get(ctx, table, ver.Date)
 	if err != nil {
-		return domain.NewErrorOccurred(ver, err)
+		return domain.ErrorOccurred{Version: ver, Err: err}
+	}
+
+	if !r.haveNewRows(rows) {
+		return nil
 	}
 
 	err = r.validator(table, rows)
 	if err != nil {
-		return domain.NewErrorOccurred(ver, err)
+		return domain.ErrorOccurred{Version: ver, Err: err}
 	}
 
 	if r.append {
-		table = domain.Table[R]{ver, rows[1:]}
-		err = r.repo.Append(ctx, table)
+		err = r.repo.Append(ctx, domain.Table[R]{ver, rows[1:]})
 	} else {
-		table = domain.Table[R]{ver, rows}
-		err = r.repo.Replace(ctx, table)
+		err = r.repo.Replace(ctx, domain.Table[R]{ver, rows})
 	}
 
 	if err != nil {
-		return domain.NewErrorOccurred(ver, err)
+		return domain.ErrorOccurred{Version: ver, Err: err}
 	}
 
-	return domain.NewUpdateCompleted(ver)
+	return domain.UpdateCompleted{Version: ver}
+}
+
+func (r Rule[R]) haveNewRows(rows []R) bool {
+	if len(rows) == 0 {
+		return false
+	}
+
+	if r.append && (len(rows) == 1) {
+		return false
+	}
+
+	return true
 }

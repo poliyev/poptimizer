@@ -1,17 +1,21 @@
-package services
+// Package bus содержит реализацию шины обработки событий.
+package bus
 
 import (
 	"context"
 	"fmt"
+	"github.com/WLM1ke/gomoex"
+	"github.com/WLM1ke/poptimizer/data/internal/rules/dates"
+	"github.com/WLM1ke/poptimizer/data/internal/rules/end"
 	"github.com/WLM1ke/poptimizer/data/internal/rules/errors"
-	"github.com/WLM1ke/poptimizer/data/internal/rules/timer"
+	"github.com/WLM1ke/poptimizer/data/internal/rules/usd"
+	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
+	"time"
 
 	"github.com/WLM1ke/poptimizer/data/internal/domain"
 	"github.com/WLM1ke/poptimizer/data/pkg/lgr"
 )
-
-const _timeFormat = "2006-01-02"
 
 // errUnprocessedEvent ошибка связанная с наличием необработанных ошибок в момент завершения работы шины событий.
 var errUnprocessedEvent = fmt.Errorf("unprocessed event")
@@ -32,10 +36,12 @@ type EventBus struct {
 }
 
 // NewEventBus создает шину событий со всеми правилами обработки событий.
-func NewEventBus(logger *lgr.Logger) *EventBus {
+func NewEventBus(logger *lgr.Logger, db *mongo.Database, iss *gomoex.ISSClient, timeout time.Duration) *EventBus {
 	rules := []domain.Rule{
 		errors.New(logger),
-		timer.New(logger),
+		end.New(logger),
+		dates.New(logger, db, iss, timeout),
+		usd.New(logger, db, iss, timeout),
 	}
 
 	return &EventBus{
@@ -103,13 +109,7 @@ func (b *EventBus) formInboxToBroadcast(ctx context.Context) {
 
 			return
 		case event := <-b.inbox:
-			b.logger.Infof(
-				"EventBus: processing %T(%s, %s, %s)",
-				event,
-				event.Group(),
-				event.Name(),
-				event.Date().UTC().Format(_timeFormat),
-			)
+			b.logger.Infof("EventBus: processing %s", event)
 			b.broadcast <- event
 		}
 	}
@@ -123,11 +123,7 @@ func (b *EventBus) drainUnprocessedEvents(inbox <-chan domain.Event) (count int)
 
 	for event := range inbox {
 		b.logger.Warnf(
-			"EventBus: unprocessed %T(%s, %s, %s)", event,
-			event.Group(),
-			event.Name(),
-			event.Date().UTC().Format(_timeFormat),
-		)
+			"EventBus: unprocessed %s", event)
 		count++
 	}
 
