@@ -5,11 +5,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/WLM1ke/gomoex"
+	"github.com/WLM1ke/poptimizer/data/internal/rules/cpi"
 	"github.com/WLM1ke/poptimizer/data/internal/rules/dates"
 	"github.com/WLM1ke/poptimizer/data/internal/rules/end"
 	"github.com/WLM1ke/poptimizer/data/internal/rules/errors"
 	"github.com/WLM1ke/poptimizer/data/internal/rules/usd"
+	"github.com/WLM1ke/poptimizer/data/pkg/client"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 	"sync"
 	"time"
 
@@ -36,12 +39,21 @@ type EventBus struct {
 }
 
 // NewEventBus создает шину событий со всеми правилами обработки событий.
-func NewEventBus(logger *lgr.Logger, db *mongo.Database, iss *gomoex.ISSClient, timeout time.Duration) *EventBus {
+func NewEventBus(
+	logger *lgr.Logger,
+	db *mongo.Database,
+	client *http.Client,
+	telegram *client.Telegram,
+	timeout time.Duration,
+) *EventBus {
+	iss := gomoex.NewISSClient(client)
+
 	rules := []domain.Rule{
-		errors.New(logger),
+		errors.New(logger, telegram, timeout),
 		end.New(logger),
 		dates.New(logger, db, iss, timeout),
 		usd.New(logger, db, iss, timeout),
+		cpi.New(logger, db, client, timeout),
 	}
 
 	return &EventBus{

@@ -1,46 +1,87 @@
 package main
 
 import (
-	"github.com/WLM1ke/poptimizer/data/pkg/client"
-	"time"
-
+	"context"
 	"github.com/WLM1ke/poptimizer/data/internal/api"
 	"github.com/WLM1ke/poptimizer/data/internal/bus"
 	"github.com/WLM1ke/poptimizer/data/pkg/app"
-	"github.com/WLM1ke/poptimizer/data/pkg/http"
+	"github.com/WLM1ke/poptimizer/data/pkg/client"
 	"github.com/WLM1ke/poptimizer/data/pkg/lgr"
+	"net/http"
+	"time"
 )
 
-const (
-	_appName = "data"
+type data struct {
+	Server struct {
+		Addr    string        `envDefault:"localhost:3000"`
+		Timeout time.Duration `envDefault:"1s"`
+	}
+	Events struct {
+		Timeout time.Duration `envDefault:"30s"`
+	}
+	MongoDB struct {
+		URI string `env:"URI,unset" envDefault:"mongodb://localhost:27017"`
+		DB  string `envDefault:"data"`
+	}
+	HTTPClient struct {
+		Connections int `envDefault:"20"`
+	}
+	Telegram struct {
+		Token  string `env:"TOKEN,unset"`
+		ChatID string `env:"CHAT_ID,unset"`
+	}
+}
 
-	_serverAddr    = "localhost:3000"
-	_serverTimeout = time.Second
+func (d data) Build(logger *lgr.Logger) ([]app.ResourceCloseFunc, []app.Service) {
+	mongo, err := client.MongoDB(d.MongoDB.URI)
+	if err != nil {
+		logger.Panicf("App: %s", err)
+	}
 
-	_clientTimeout = 30 * time.Second
-	_mongoURI      = "mongodb://localhost:27017"
-	_mongoDB       = "data_new"
+	httpClient := client.NewHTTPClient(d.HTTPClient.Connections)
 
-	_issConn = 20
-)
+	resource := []app.ResourceCloseFunc{
+		func(ctx context.Context) error {
+			// Драйвер MongoDB использует дефолтный клиент под капотом
+			http.DefaultClient.CloseIdleConnections()
 
-func main() {
-	logger := lgr.New(_appName)
+			return mongo.Disconnect(ctx)
+		},
+		func(ctx context.Context) error {
+			httpClient.CloseIdleConnections()
+
+			return nil
+		},
+	}
+
+	db := mongo.Database(d.MongoDB.DB)
+
+	telega, err := client.NewTelegram(httpClient, d.Telegram.Token, d.Telegram.ChatID)
+	if err != nil {
+		logger.Panicf("App: %s", err)
+	}
 
 	services := []app.Service{
-		app.NewGoroutineCounter(logger),
-		http.NewServer(
+		api.NewHTTPServer(
 			logger,
-			_serverAddr,
-			_serverTimeout,
-			api.GetBSON(),
+			db,
+			d.Server.Addr,
+			d.Server.Timeout,
 		),
 		bus.NewEventBus(
 			logger,
-			client.MongoDB(_mongoURI, _mongoDB),
-			client.ISS(_issConn),
-			_clientTimeout),
+			db,
+			httpClient,
+			telega,
+			d.Events.Timeout,
+		),
 	}
 
-	app.Run(logger, services...)
+	return resource, services
+}
+
+func main() {
+	var cfg data
+
+	app.New(&cfg).Run()
 }
