@@ -1,4 +1,4 @@
-package usd
+package indexes
 
 import (
 	"context"
@@ -6,9 +6,14 @@ import (
 	"github.com/WLM1ke/poptimizer/data/internal/rules/dates"
 )
 
-const _group = "usd"
+const _group = "indexes"
 
-var ID = domain.ID{Group: _group, Name: _group}
+var indexes = []string{
+	`MCFTRR`,
+	`MEOGTRR`,
+	`IMOEX`,
+	`RVI`,
+}
 
 type selector struct {
 }
@@ -16,8 +21,11 @@ type selector struct {
 func (s selector) Select(_ context.Context, event domain.Event) (ids []domain.ID, err error) {
 	switch selected := event.(type) {
 	case domain.UpdateCompleted:
-		if selected.ID == dates.ID {
-			ids = append(ids, ID)
+		if selected.ID() == dates.ID {
+			for _, index := range indexes {
+				ids = append(ids, domain.NewID(_group, index))
+			}
+
 		}
 	}
 

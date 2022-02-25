@@ -10,6 +10,7 @@ positions:
   AFKS: 0
   AFLT: 0
   AGRO: 0
+  AKMB: 0
   AKRN: 0
   ALRS: 0
   AMD-RM: 0
@@ -23,9 +24,11 @@ positions:
   BABA-RM: 0
   BANE: 0
   BANEP: 0
+  BCSB: 0
   BELU: 0
   BIDU-RM: 0
   BIIB-RM: 0
+  BLNG: 0
   BMY-RM: 0
   BRZL: 0
   BSPB: 0
@@ -37,6 +40,7 @@ positions:
   CNTL: 0
   CNTLP: 0
   CRM-RM: 0
+  COST-RM: 0
   CSCO-RM: 0
   CVX-RM: 0
   DIOD: 0
@@ -53,6 +57,7 @@ positions:
   FEES: 0
   FESH: 0
   FIVE: 0
+  FIXP: 0
   FLOT: 0
   FXCN: 0
   FXGD: 0
@@ -65,6 +70,7 @@ positions:
   GCHE: 0
   GE-RM: 0
   GEMA: 0
+  GILD-RM: 0
   GLTR: 0
   GM-RM: 0
   GMKN: 0
@@ -73,6 +79,7 @@ positions:
   GTRK: 0
   HHRU: 0
   HIMCP: 0
+  HON-RM: 0
   HPQ-RM: 0
   HYDR: 0
   IBM-RM: 0
@@ -112,7 +119,6 @@ positions:
   MRKY: 0
   MRKZ: 0
   MRNA-RM: 0
-  MRSB: 0
   MSFT-RM: 0
   MSNG: 0
   MSRS: 0
@@ -136,8 +142,8 @@ positions:
   NVDA-RM: 0
   NVTK: 0
   OGKB: 0
+  OKEY: 0
   ORCL-RM: 0
-  ORUP: 0
   OZON: 0
   PFE-RM: 0
   PG-RM: 0
@@ -147,6 +153,7 @@ positions:
   PMSBP: 0
   POGR: 0
   POLY: 0
+  PTR-RM: 0
   PYPL-RM: 0
   QCOM-RM: 0
   QIWI: 0
@@ -176,7 +183,6 @@ positions:
   SNGS: 0
   SNGSP: 0
   SBUX-RM: 0
-  STSBP: 0
   SUGB: 0
   SVAV: 0
   T-RM: 0
@@ -188,6 +194,7 @@ positions:
   TGKD: 0
   TGKN: 0
   TGT-RM: 0
+  TMUS-RM: 0
   TRMK: 0
   TRNFP: 0
   TRUR: 0
@@ -203,6 +210,7 @@ positions:
   USBN: 0
   V-RM: 0
   VKCO: 0
+  VRSB: 0
   VSMO: 0
   VTBB: 0
   VTBM: 0

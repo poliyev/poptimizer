@@ -16,7 +16,7 @@ const (
 	_issMinute = 45
 )
 
-var ID = domain.ID{Group: _group, Name: _group}
+var ID = domain.NewID(_group, _group)
 
 // Rule - правило, сообщающее о возможном появлении новых данных.
 //
@@ -71,6 +71,6 @@ func (r *Rule) sendIfStart(out chan<- domain.Event) {
 	if r.last.Before(lastNew) {
 		r.last = lastNew
 
-		out <- domain.UpdateCompleted{Version: domain.Version{ID: ID, Date: lastNew}}
+		out <- domain.NewUpdateCompleted(ID, lastNew)
 	}
 }

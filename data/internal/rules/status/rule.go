@@ -1,4 +1,4 @@
-package cpi
+package status
 
 import (
 	"github.com/WLM1ke/poptimizer/data/internal/domain"
@@ -11,20 +11,26 @@ import (
 	"time"
 )
 
-const _group = "cpi"
+const _group = "status"
 
 var ID = domain.NewID(_group, _group)
 
-type CPI struct {
-	Date  time.Time
-	Close float64
+type DivStatus struct {
+	Ticker string
+	Date   time.Time
 }
 
+// Возможные альтернативные источники:
+// - https://smart-lab.ru/dividends/index/order_by_yield/desc/
+// - https://закрытияреестров.рф
+// - https://dividend.company
+// Теоретически можно проверять коректность распознования тикеров, но в этом кажется нет необходимости
+// Тесты для VEON-RX, AKRN и T-RM
 func New(logger *lgr.Logger, db *mongo.Database, client *http.Client, timeout time.Duration) domain.Rule {
-	return template.NewRule[CPI](
-		"CPIRule",
+	return template.NewRule[DivStatus](
+		"DivStatus",
 		logger,
-		repo.NewMongo[CPI](db),
+		repo.NewMongo[DivStatus](db),
 		template.NewSelectOnTableUpdate(dates.ID, ID),
 		gateway{client: client},
 		validator,

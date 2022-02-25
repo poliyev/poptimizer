@@ -33,19 +33,17 @@ func NewMongo[R any](db *mongo.Database) *Mongo[R] {
 func (r *Mongo[R]) Get(ctx context.Context, id domain.ID) (table domain.Table[R], err error) {
 	var dao tableDAO[R]
 
-	collection := r.db.Collection(string(id.Group))
-	err = collection.FindOne(ctx, bson.M{"_id": string(id.Name)}).Decode(&dao)
+	collection := r.db.Collection(string(id.Group()))
+	err = collection.FindOne(ctx, bson.M{"_id": string(id.Name())}).Decode(&dao)
 
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
 		err = nil
-		table.ID = id
+		table = domain.NewEmptyTable[R](id)
 	case err != nil:
 		err = fmt.Errorf("%w: %#v -> %s", ErrInternal, id, err)
 	default:
-		table.ID = id
-		table.Date = dao.Date
-		table.Rows = dao.Rows
+		table = domain.NewTable(id, dao.Date, dao.Rows)
 	}
 
 	return table, err
@@ -53,13 +51,13 @@ func (r *Mongo[R]) Get(ctx context.Context, id domain.ID) (table domain.Table[R]
 
 // Replace перезаписывает таблицу.
 func (r *Mongo[R]) Replace(ctx context.Context, table domain.Table[R]) error {
-	collection := r.db.Collection(string(table.Group))
+	collection := r.db.Collection(string(table.Group()))
 
-	filter := bson.M{"_id": table.Name}
-	update := bson.M{"$set": bson.M{"rows": table.Rows, "date": table.Date}}
+	filter := bson.M{"_id": table.Name()}
+	update := bson.M{"$set": bson.M{"rows": table.Rows(), "date": table.Date()}}
 
 	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
-		return fmt.Errorf("%w: %#v -> %s", ErrTableUpdate, table.ID, err)
+		return fmt.Errorf("%w: %#v -> %s", ErrTableUpdate, table.ID(), err)
 	}
 
 	return nil
@@ -67,13 +65,13 @@ func (r *Mongo[R]) Replace(ctx context.Context, table domain.Table[R]) error {
 
 // Append добавляет строки в конец таблицы.
 func (r *Mongo[R]) Append(ctx context.Context, table domain.Table[R]) error {
-	collection := r.db.Collection(string(table.Group))
+	collection := r.db.Collection(string(table.Group()))
 
-	filter := bson.M{"_id": table.Name}
-	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": table.Rows}}, "$set": bson.M{"date": table.Date}}
+	filter := bson.M{"_id": table.Name()}
+	update := bson.M{"$push": bson.M{"rows": bson.M{"$each": table.Rows()}}, "$set": bson.M{"date": table.Date()}}
 
 	if _, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
-		return fmt.Errorf("%w: %#v -> %s", ErrTableUpdate, table.ID, err)
+		return fmt.Errorf("%w: %#v -> %s", ErrTableUpdate, table.ID(), err)
 	}
 
 	return nil
@@ -93,11 +91,11 @@ func NewMongoJSON(db *mongo.Database) *MongoJSON {
 
 // GetJSON загружает ExtendedJSON представление таблицы.
 func (r *MongoJSON) GetJSON(ctx context.Context, id domain.ID) ([]byte, error) {
-	collection := r.db.Collection(string(id.Group))
+	collection := r.db.Collection(string(id.Group()))
 
 	projections := options.FindOne().SetProjection(bson.M{"_id": 0, "rows": 1, "date": 1})
 
-	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name}, projections).DecodeBytes()
+	raw, err := collection.FindOne(ctx, bson.M{"_id": id.Name()}, projections).DecodeBytes()
 	switch {
 	case errors.Is(err, mongo.ErrNoDocuments):
 		return nil, fmt.Errorf("%w: %#v", ErrTableNotFound, id)
